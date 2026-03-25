@@ -1,0 +1,16 @@
+.custom-card {
+   border: 2px solid green;
+   border-radius: 10px;
+
+}
+
+.card-header {
+   background-color: green;
+   padding: 10px;
+   font-weight: bold;
+}
+
+.card-header h5 
+{
+   color:white;
+}

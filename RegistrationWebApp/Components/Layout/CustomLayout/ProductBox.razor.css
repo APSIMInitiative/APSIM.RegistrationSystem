@@ -1,0 +1,17 @@
+.product-box{
+    border: 1px solid #038007;
+    border-radius: 8px;
+    background-color: #ffffff;
+    height: 100%;
+}
+
+.product-box > .card-body {
+    background-color: #ffffff;
+}
+
+.product-box:hover *{
+    /* background-color:#038007; */
+    transition: background-color 0.3s ease, color 0.3s ease, border-width 0.3s ease;
+    color: #038007;
+}
+

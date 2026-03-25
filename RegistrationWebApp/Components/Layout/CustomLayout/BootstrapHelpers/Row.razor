@@ -1,0 +1,16 @@
+@namespace RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+
+<div class="row @CustomRowClasses">
+        @ChildContent
+</div>
+
+
+@code {
+
+    [Parameter]
+    public string? CustomRowClasses { get; set; }
+
+    [Parameter]
+    public required RenderFragment ChildContent { get; set; }
+
+}

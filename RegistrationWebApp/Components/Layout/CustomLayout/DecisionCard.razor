@@ -1,0 +1,72 @@
+
+@using RegistrationWebApp.Components.Classes.Registration.EventArgs;
+
+@namespace RegistrationWebApp.Components.Layout.CustomLayout
+
+@if (IsVisible)
+{
+    <div class="decision-card card mt-4">
+        <div class="card-header">
+            <h5><strong>Step @StepNumber:</strong> @StepQuestionText</h5>
+        </div>
+        <div class="card-body">
+            @* <p>This means you are intending to use APSIM in a commercial setting, such as for profit or business purposes.</p> *@
+            <p>@Description</p>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-success" @onclick="@ToggleYes">@DecisionOneText</button>
+            <button class="btn btn-danger" @onclick="@ToggleNo">@DecisionTwoText</button>
+            <button class="btn btn-secondary float-end" @onclick="@ToggleThirdOption">@DecisionThreeText</button>
+        </div>
+    </div>
+}
+
+@code
+{
+    [Parameter]
+    public required int StepNumber { get; set; }
+
+    [Parameter]
+    public required string StepQuestionText { get; set; }
+
+    [Parameter]
+    public required string Description { get; set; }
+
+    [Parameter]
+    public required string DecisionOneText { get; set; } = "Yes";
+
+    [Parameter]
+    public required string DecisionTwoText { get; set; } = "No";
+
+    [Parameter]
+    public required string DecisionThreeText { get; set; } = "Start Over";
+
+    [Parameter]
+    public EventCallback ToggleYes { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleNo { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleThirdOption { get; set; }
+
+
+
+    [Parameter]
+    public bool IsVisible { get; set; } = false;
+
+    private async Task OnToggleYes()
+    {
+        await ToggleYes.InvokeAsync();
+    }
+
+    private async Task OnToggleNo()
+    {
+        await ToggleNo.InvokeAsync();
+    }
+
+    private async Task OnToggleThirdOption()
+    {
+        await ToggleThirdOption.InvokeAsync();
+    }
+}

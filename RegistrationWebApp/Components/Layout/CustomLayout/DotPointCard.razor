@@ -1,0 +1,39 @@
+@using System.Security.Principal
+@using Microsoft.VisualBasic
+
+@namespace RegistrationWebApp.Components.Layout.CustomLayout
+
+<div class="card dotpoint-card-layout text-center h-100">
+    <div class="card-header">
+        <h5 class="card-title">@Title</h5>
+    </div>
+    <div class="card-body">
+        <ul class="card-text text-start">
+            @foreach (var item in Description)
+            {   
+                <li><strong>@item</strong></li>
+            }
+        </ul>
+    </div>
+    <div class="card-footer text-center">
+        <button class="btn btn-primary" onclick="window.open('@BodyButtonLink', '_blank')">@BodyButtonText</button>
+    </div>
+</div>
+
+@code{
+    [Parameter]
+    public required string Title { get; set; }
+
+    [Parameter]
+    public required List<string> Description { get; set; }
+    
+    [Parameter]
+    public required string MainButtonText { get; set; }
+
+    [Parameter]
+    public string BodyButtonLink { get; set; } = "#";
+
+    [Parameter]
+    public string BodyButtonText { get; set; } = "";
+
+}

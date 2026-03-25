@@ -1,0 +1,22 @@
+@using RegistrationWebApp.Components.LayoutObjects
+
+@namespace RegistrationWebApp.Components.Layout.CustomLayout
+
+<div class="card product-box" >
+    <div class="card-header text-center">
+        <h3 class="card-title">@Product.Name</h3>
+    </div>
+    <img src="@Product.ImageUrl" alt="@Product.Name" class="card-img-top" />
+    <div class="card-body align-items-end">
+        <p class="card-description">@Product.Description</p>
+    </div>
+    <div class="card-footer text-center">
+        <NavLink href="@Product.Href" class="btn btn-success">Register and Download</NavLink>
+    </div>
+</div>
+
+@code{
+    [Parameter]
+    public required Product Product { get; set; }
+
+}

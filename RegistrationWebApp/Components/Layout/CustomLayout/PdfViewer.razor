@@ -1,0 +1,21 @@
+@namespace RegistrationWebApp.Components.Layout.CustomLayout
+
+<div class="pdf-div mt-4 mb-4 border border-success rounded p-4 @ExtraClasses">
+    <h2 class="text-center">Licence Details</h2>
+    <div class="row">
+        <div class="col-md-12 text-center">
+            <iframe src="@PdfUrl" width="100%" height="500"></iframe>
+        </div>
+    </div>
+</div>
+
+
+@code{
+
+    /// <summary>Additional CSS classes to apply to the component.</summary>
+    [Parameter]
+    public string ExtraClasses { get; set; } = string.Empty;
+
+    [Parameter]
+    public string PdfUrl { get; set; } = "/Documents/APSIM_General_Use_Licence.pdf";
+}

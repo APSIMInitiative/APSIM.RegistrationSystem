@@ -1,0 +1,97 @@
+@using RegistrationWebApp.Components.Classes.Interfaces
+@using RegistrationWebApp.Components.Classes.Registration
+@using RegistrationWebApp.Components.Classes.Utilities
+@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+@using RegistrationWebApp.Components.Layout.CustomLayout
+
+@namespace RegistrationWebApp.Components.Pages
+@page "/admin/"
+@rendermode InteractiveServer
+
+<Row>
+    <h1>Manage</h1>
+    <p>This is the admin page. Here you can manage your products and licenses.</p>
+
+    <Row CustomRowClasses="licence-row mt-4">
+        <Col CustomColClasses="col-12 col-md-12">
+            <h2>Licenses</h2>
+            <p>Here you can manage licences through their lifecycle</p>
+
+            <Row CustomRowClasses="row-md-12 p-3">
+                <Col CustomColClasses="col-12 col-md-5 m-3 ">
+                    <h3>Recent General Use Registrations</h3>
+                    @foreach (var registration in registrations)
+                    { 
+                        <Card CardClasses="mt-3 mb-3" TitleText="General Use Registration" >
+                            <p><strong>Contact Name:</strong> @registration.ContactName</p>
+                            <p><strong>Contact Email:</strong> @registration.ContactEmail</p>
+                        </Card>
+                    }
+                </Col>
+                <Col CustomColClasses="col-12 col-md-5 m-3 ">
+                    <h3>Special Use Registrations</h3>
+                    @foreach (var registration in registrations)
+                    {
+                        @if (registration is SpecialUseRegistration)
+                        {
+
+                            <Card CardClasses="mt-3 mb-3" TitleText="Special Use Registration"  >
+                                <p><strong>Contact Name:</strong> @registration.ContactName</p>
+                                <p><strong>Contact Email:</strong> @registration.ContactEmail</p>
+                                <p><strong>Organisation Name:</strong> @( (registration as SpecialUseRegistration)?.OrganisationName )</p>
+                                <p><strong>Organisation Address:</strong> @( (registration as SpecialUseRegistration)?.OrganisationAddress )</p>
+                                <p><strong>Licence Pathway:</strong> @( (registration as SpecialUseRegistration)?.LicencePathWay.GetDescription() )</p>
+                                <p><strong>Annual Turnover:</strong> @( (registration as SpecialUseRegistration)?.AnnualTurnover.GetDescription() )</p>
+                                <p><strong>Application Date:</strong> @( (registration as SpecialUseRegistration)?.ApplicationDate.ToShortDateString() )</p>
+                            </Card>
+
+                        }
+                    }
+                </Col>
+            </Row>
+
+
+        </Col>
+    </Row>
+
+    <Row CustomRowClasses="registration-stats-row mt-4">
+        <Col CustomColClasses="col-12 col-md-6">
+            <h2>Products</h2>
+            <p>Here you can manage products and their associated licences</p>
+        </Col>
+    </Row>
+
+
+</Row>
+
+
+@code{
+
+    List<IRegistration> registrations = new List<IRegistration>(){
+        new GeneralUseRegistration() { 
+            ContactName = "Dr Joe Nothing", 
+            ContactEmail = "joe@nothing.com", 
+        },
+        new GeneralUseRegistration() 
+        { 
+            ContactName = "Dr Jane Smith", 
+            ContactEmail = "jane@smith.com", 
+        },
+        new GeneralUseRegistration() 
+        { 
+            ContactName = "Dr Bob Johnson", 
+            ContactEmail = "bob@johnson.com", 
+        },
+        new SpecialUseRegistration() 
+        { 
+            ContactName = "Dr Alice Brown", 
+            ContactEmail = "alice@brown.com", 
+            OrganisationAddress = "123 Main St, Anytown, USA",
+            OrganisationName = "Alice's Research Lab",
+            LicencePathWay = LicencePathway.TypeOne,
+            AnnualTurnover = AnnualTurnover.BelowTwoMillion,
+            ApplicationDate = DateTime.Now.AddDays(-10),
+        }
+    };
+
+}

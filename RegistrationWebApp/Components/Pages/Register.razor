@@ -1,0 +1,333 @@
+@using RegistrationWebApp.Components.Classes.Registration
+@using RegistrationWebApp.Components.Layout.CustomLayout;
+@using RegistrationWebApp.Components.Classes.Utilities;
+@using RegistrationWebApp.Components.Classes.Registration.EventArgs;
+@using System.Runtime.CompilerServices
+@using System.Diagnostics.Eventing.Reader
+
+@namespace RegistrationWebApp.Components.Pages
+@page "/register/{ProductId?}"
+@*This page allows users to select a product licence and register for it. The content of the page changes based on the selected product.*@
+@rendermode InteractiveServer
+
+<PageTitle>Pick Product Licence</PageTitle>
+<p>Test</p>
+<div class="row mt-4">
+    <div class="col">
+        <h1 class="text-center">@PageHeading</h1>
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <DotPointCard 
+                    Title="Using APSIM for learning or research purposes?" 
+                    Description=@GeneralDotPoints
+                    MainButtonText="Register for General Use Licence"
+                    BodyButtonLink="https://www.apsim.info/registration/general-use-licence/"
+                    BodyButtonText="Full Licence details"
+                />
+            </div>
+            <div class="col-md-6">
+                <DotPointCard 
+                    Title="Using APSIM for commercial purposes?" 
+                    Description=@SpecialDotPoints
+                    MainButtonText="Register for Special Use Licence"
+                    BodyButtonLink="https://www.apsim.info/download-apsim/"
+                    BodyButtonText="Full Licence details"
+                />
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Start of special use choice boxes *@
+<div class="special-use-licence-choice-row row mt-4 mb-4">
+    @if (ProductId is not null)
+    {
+    <div class="col">
+        <div class="row text-center">
+            <h3>Not quite sure which one to pick? </h3>
+            <h4>Go through the steps below.</h4>
+        </div>
+        <DecisionCard 
+            StepNumber="1"
+            StepQuestionText="Do you intend to use APSIM for commercial purposes?"
+            Description="This means you are intending to use APSIM in a commercial setting, such as for profit or business purposes."
+            ToggleYes="ToggleUseInReleased"
+            ToggleNo="ToggleGeneral"
+            ToggleThirdOption="ToggleAll"
+            IsVisible="@isCommercialUseDecisionCardVisible"
+        />
+        <DecisionCard 
+            StepNumber="2"
+            StepQuestionText="Do you intend to only use installed/released versions of APSIM?"
+            Description="This means you will only use installed versions of APSIM and not make any modifications to the source code."
+            DecisionOneText="Yes"
+            DecisionTwoText="No"
+            ToggleYes="ToggleSpecial"
+            ToggleNo="ToggleNoCodeChanges"
+            ToggleThirdOption="ToggleAll"
+            IsVisible="@isUseInReleasedDecisionCardVisible"
+        />
+        <DecisionCard 
+            StepNumber="3"
+            StepQuestionText="Do you intend to make modifications to the APSIM source code?"
+            Description="This means you will be making changes to the APSIM source code, such as adding new features, adding new models, and fixing bugs or changing existing code."
+            DecisionOneText="Yes"
+            DecisionTwoText="No"
+            ToggleYes="ToggleImprovementsShared"
+            ToggleNo="ToggleSpecial"
+            ToggleThirdOption="ToggleAll"
+            IsVisible="@isNoCodeChangesDecisionCardVisible"
+        />
+        <DecisionCard 
+            StepNumber="4"
+            StepQuestionText="Do you intend to share any modifications made back to the APSIM Initiative?"
+            Description="This means you are happy to submit any modifications you make back to the APSIM Initiative for potential inclusion in the main codebase."
+            DecisionOneText="Yes"
+            DecisionTwoText="No"
+            ToggleYes="ToggleSpecialSharingYes"
+            ToggleNo="ToggleSpecial"
+            ToggleThirdOption="ToggleAll"
+            IsVisible="@areImprovementsSharedDecisionCardVisible"
+        />
+    </div>
+    }
+    @if (ProductId is null)
+    {
+        <div class="col text-center">
+            <h3>Please return to the home page to <a href="/">select a product</a>.</h3>
+        </div>
+    }
+</div>
+
+
+@* // Special Use Registration Form *@
+<div class="register-row row mt-4" hidden="@(!isSpecialUseRegistrationVisible)">
+    <div class="col text-center">
+        <h2 class="text-center">Special Use Registration</h2>
+        <div class="alert alert-info " role="alert">
+            <p>Based on your selections a licence pathway has been selected for you.</p>
+        </div>
+        <div class="special-use-licence-choice-row row mt-4">
+            <div class="col-md-6 offset-md-3 mb-4">
+                <EditForm Model="@specialUseRegistration" OnValidSubmit="SubmitApplication" FormName="specialUseRegistrationForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="row mb-3">
+                        <InputText class="form-control mb-2" Placeholder="*Email" @bind-Value="specialUseRegistration!.ContactEmail" />
+                        <ValidationMessage For="@(() => specialUseRegistration.ContactEmail)" />
+                        <InputText class="form-control mb-2" Placeholder="*Contact Name" @bind-Value="specialUseRegistration!.ContactName" />
+                        <ValidationMessage For="@(() => specialUseRegistration.ContactName)" />
+                        <InputText class="form-control mb-2" Placeholder="Organisation Name" @bind-Value="specialUseRegistration!.OrganisationName" />
+                        <ValidationMessage For="@(() => specialUseRegistration.OrganisationName)" />
+                        <InputText class="form-control mb-2" Placeholder="Organisation Address" @bind-Value="specialUseRegistration!.OrganisationAddress" />
+                        <ValidationMessage For="@(() => specialUseRegistration.OrganisationAddress)" />
+                        <InputText class="form-control mb-2" Placeholder="Organisation Website" @bind-Value="specialUseRegistration!.OrganisationWebsite" />
+                        <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="specialUseRegistration!.ContactPhone" />
+                        <InputSelect class="form-control mb-2" @bind-Value="specialUseRegistration!.LicencePathWay">
+                            <option value=""disabled>-- Select Licence Pathway --</option>
+                            @if (SpecialUseStep <= 3)
+                            {
+                                <option value="@LicencePathway.TypeOne" selected disabled>@LicencePathway.TypeOne.GetDescription()</option>
+                                <option value="@LicencePathway.TypeTwo" disabled>@LicencePathway.TypeTwo.GetDescription()</option>
+                            }
+                            @if (SpecialUseStep == 4)
+                            {
+                                <option value="@LicencePathway.TypeOne" disabled>@LicencePathway.TypeOne.GetDescription()</option>
+                                <option value="@LicencePathway.TypeTwo" disabled selected>@LicencePathway.TypeTwo.GetDescription()</option>
+                            }
+                        </InputSelect >
+                        <InputSelect class="form-control mb-2" @bind-Value="specialUseRegistration!.AnnualTurnover">
+                            @foreach (var annualTurnover in Enum.GetValues<AnnualTurnover>())
+                            {
+                                <option value="@annualTurnover">@annualTurnover.GetDescription()</option>
+                            }
+                            <option value="" selected disabled>*-- Select Annual Turnover Range --</option>
+                        </InputSelect >
+                        <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="specialUseRegistration!.LicenceStatus">
+                            <option value="@LicenceStatus.SpecialAwaitingReview" selected disabled>@LicenceStatus.SpecialAwaitingReview.GetDescription()</option>
+                        </InputSelect >
+                        <label class="form-check-label mb-2">You must read and agree to the terms and conditions to submit your application.</label>
+                        <InputCheckbox class="form-check mb-2" @bind-Value="specialUseRegistration!.AgreesToTerms" >I agree to the terms and conditions</InputCheckbox>
+                        <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
+                    </div>
+                    <div class="row text-center">
+                        <button type="submit" class="btn btn-success">Submit Application</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="general-registration-form-row row " hidden="@(!isGeneralUseRegistrationVisible)">
+    <div class="col-md-6 offset-md-3 mt-5 mb-5 p-4 border border-success rounded">
+        <h2 class="text-center">General Use Registration</h2>
+        <EditForm Model="@generalUseRegistration" OnValidSubmit="SubmitApplication" FormName="generalUseRegistrationForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="row mb-3">
+                <InputText class="form-control mb-2" Placeholder="Email" @bind-Value="generalUseRegistration!.ContactEmail" />
+                <ValidationMessage For="@(() => generalUseRegistration.ContactEmail)" />
+            </div>
+            <div class="row mb-3">
+                <InputText class="form-control mb-2" Placeholder="Contact Name" @bind-Value="generalUseRegistration!.ContactName" />
+                <ValidationMessage For="@(() => generalUseRegistration.ContactName)" />
+            </div>
+            <div class="row mb-3">
+                <InputSelect @bind-Value="generalUseRegistration!.LicenceStatus" class="form-control mb-2">
+                    <option value="@LicenceStatus.GeneralUse" selected disabled>@LicenceStatus.GeneralUse.GetDescription()</option>
+                </InputSelect>
+            </div>
+            <div class="row text-center">
+                <button type="submit" class="btn btn-success">Submit Application</button>
+            </div>
+            <div class="row text-center">
+
+            </div>
+            <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
+        </EditForm>
+    </div>
+</div>
+
+@* <div class="pdf-div mt-4 mb-4 border border-success rounded p-4" hidden="@(!isGeneralUseLicenceVisible)">
+    <h2 class="text-center">Licence Details</h2>
+    <div class="row">
+        <div class="col-md-6 text-center">
+            <iframe src=/Documents/APSIM_General_Use_Licence.pdf width="100%"></iframe>
+        </div>
+    </div>
+</div> *@
+
+@* <div class="pdf-div mt-4 mb-4 border border-success rounded p-4" hidden="@(!isSpecialUseLicenceVisible)">
+    <h2 class="text-center">Licence Details</h2>
+    <div class="row">
+        <div class="col-md-6 text-center">
+            <iframe src=/Documents/APSIM_Special_Use_Licence.pdf width="100%"></iframe>
+        </div>
+    </div>
+</div> *@
+
+<CustomModal @bind-IsOpen="showModal" Title="Application Submitted">
+    <p>Thank you for your application. We will review your submission and contact you via email with the next steps.</p>
+</CustomModal>
+
+@code {
+    // Code for handling form submission and any additional logic can be added here.
+    [Parameter]
+    public string? ProductId { get; set; }
+
+    public int SpecialUseStep { get; set; } = 0;
+
+    public string PageHeading {
+        get => ProductId switch
+        {
+            "nextgen" => "APSIM Next Generation Registration",
+            "classic" => "APSIM Classic Registration",
+            _ => "Pick a Product Licence"
+        };               
+    }
+
+    private SpecialUseRegistration specialUseRegistration { get; set; } = new();
+    private GeneralUseRegistration generalUseRegistration { get; set; } = new();    
+
+    public bool isCommercialUseDecisionCardVisible {get;set;} = true;
+    public bool isUseInReleasedDecisionCardVisible {get;set;} = false;
+    public bool isNoCodeChangesDecisionCardVisible {get;set;} = false;
+    public bool areImprovementsSharedDecisionCardVisible {get;set;} = false;
+
+    public List<string> GeneralDotPoints { get; set; } = new List<string>()
+    {
+        "For educational purposes, for personal learning, or for public good research",
+        "Free of charge",
+        "Required to submit modifications back to the APSIM Initiative for potential inclusion in the main codebase",
+    };
+
+    public List<string> SpecialDotPoints { get; set; } = new List<string>()
+    {
+        "For consulting, commercial research, or any activity that generates revenue.",
+        "Requires a fee",
+        "Licencee can keep modifications for private use (Type 2) or "+
+        "submit back to the APSIM Initiative for potential inclusion in the main codebase (Type 1)"
+    };
+
+    private async Task ToggleSpecialSharingYes()
+    {
+        SpecialUseStep = 3;
+        isSpecialUseRegistrationVisible = !isSpecialUseRegistrationVisible;
+    }
+
+
+    private async Task ToggleSpecial()
+    {   
+        isSpecialUseRegistrationVisible = !isSpecialUseRegistrationVisible;
+
+    }   
+
+    private async Task ToggleGeneral()
+    {
+        isGeneralUseRegistrationVisible = !isGeneralUseRegistrationVisible;
+    }
+
+    private async Task ToggleUseInReleased()
+    {
+        isUseInReleasedDecisionCardVisible = !isUseInReleasedDecisionCardVisible;
+        SpecialUseStep = 2;
+    }
+
+    private async Task ToggleNoCodeChanges()
+    {
+        isNoCodeChangesDecisionCardVisible = !isNoCodeChangesDecisionCardVisible;
+        SpecialUseStep = 3;
+    }
+
+    private async Task ToggleImprovementsShared()
+    {
+        areImprovementsSharedDecisionCardVisible = !areImprovementsSharedDecisionCardVisible;
+        SpecialUseStep = 4;
+    }
+
+    private async Task ToggleAll()
+    {
+        isCommercialUseDecisionCardVisible = true;
+        isUseInReleasedDecisionCardVisible = false;
+        isNoCodeChangesDecisionCardVisible = false;
+        areImprovementsSharedDecisionCardVisible = false;
+        isSpecialUseRegistrationVisible = false;
+        isGeneralUseRegistrationVisible = false;
+        SpecialUseStep = 0;
+    }
+
+
+    private async Task SubmitApplication()
+    {
+        // Logic for handling form submission can be added here.  
+        // TODO: send form data to backend for processing and storage
+        if (isGeneralUseRegistrationVisible)
+        {
+            Console.WriteLine("General Use Registration Submitted:");
+            Console.WriteLine(generalUseRegistration.ToString());
+        }
+        else if (isSpecialUseRegistrationVisible)
+        {
+            Console.WriteLine("Special Use Registration Submitted:");
+            Console.WriteLine(specialUseRegistration.ToString());
+        }
+
+    }
+
+    private bool isSpecialUseRegistrationVisible = false;
+
+    private bool isGeneralUseRegistrationVisible = false;
+
+    private bool showModal = false;
+
+    private void OpenModal()
+    {
+        
+        showModal = true;
+    }
+
+
+
+}

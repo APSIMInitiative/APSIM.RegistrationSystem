@@ -1,0 +1,15 @@
+@namespace RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+
+<div class="col @CustomColClasses">
+    @ChildContent
+</div>
+
+@code {
+
+    [Parameter]
+    public string? CustomColClasses { get; set; }
+
+    [Parameter]
+    public required RenderFragment ChildContent { get; set; }
+
+}

@@ -1,0 +1,22 @@
+@namespace RegistrationWebApp.Components.Layout.CustomLayout
+
+<div class="card custom-card text-center @CardClasses">
+    <div class="card-header">
+        <h5 class="card-title">@TitleText</h5>
+    </div>
+    <div class="card-body">
+        @ChildContent
+    </div>
+</div>
+
+@code{
+    [Parameter]
+    public string? TitleText { get; set; } ="";
+
+    [Parameter]
+    public string? CardClasses { get; set; } ="";
+
+    [Parameter]
+    public required RenderFragment ChildContent { get; set; }
+
+}

@@ -1,0 +1,45 @@
+﻿@using RegistrationWebApp.Components.LayoutObjects
+@using RegistrationWebApp.Components.Layout.CustomLayout
+
+@namespace RegistrationWebApp.Components.Pages
+@page "/"
+
+<PageTitle>APSIM Registration</PageTitle>
+
+<div class="product-row row g-3">
+    <div class="col">
+        <h2 class="text-center">Register and Download</h2>
+        <p class="text-center">Register here to download APSIM products.</p>
+        <div class="product-list row">
+            @foreach (var product in Products)
+            {
+                <div class="col-sm-12 col-md-6 col-lg-6 mb-4">
+                    <a href="@product.Href" class="text-decoration-none text-dark">
+                        <ProductBox Product="product" />
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* This is the code section for defining the list of products *@
+@code{
+    List<Product> Products = new List<Product>
+    {
+        new Product
+        {
+            Name = "APSIM Next Generation",
+            Description = "APSIM Next Generation is a complete rewrite of the original APSIM software, designed to be more modular, extensible, and easier to maintain. It is built on modern software development principles and technologies, making it more efficient and user-friendly. If you are new to APSIM or looking for the latest features and improvements, we recommend registering for and downloading APSIM Next Generation.",
+            ImageUrl = "/APSIM_screenshot.png",
+            Href = "register/nextgen"
+        },
+        new Product
+        {
+            Name = "APSIM Classic (7.10)",
+            Description = "APSIM Classic (7.10) is the original APSIM software, known for its robustness and reliability. It has been widely used in the agricultural research community for many years. Please note that from APSIM Classic version 7.10 onwards, the software is no longer being actively developed, and users are encouraged to transition to APSIM Next Generation for the latest features and improvements.",
+            ImageUrl = "/APSIM_Classic_screenshot.png",
+            Href = "register/classic"
+        },
+    };
+}
