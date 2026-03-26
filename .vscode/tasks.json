@@ -36,21 +36,22 @@
             }
         },
         {
-            "label": "dotnet: build RegistrationWebApp",
-            "type": "dotnet",
-            "task": "build",
-            "problemMatcher": "$msCompile",
-            "options": {
-                "cwd": "${workspaceFolder}/RegistrationWebApp"
-            }
-        },
-        {
             "label": "dotnet: build RegistrationWebAPI",
             "type": "dotnet",
             "task": "build",
             "problemMatcher": "$msCompile",
             "options": {
                 "cwd": "${workspaceFolder}/RegistrationWebAPI"
+            }
+        },
+        {
+            "type": "dotnet",
+            "task": "build",
+            "file": "RegistrationWebApp.csproj",
+            "problemMatcher": [],
+            "label": "dotnet: build RegistrationWebApp",
+            "options": {
+                "cwd": "${workspaceFolder}/RegistrationWebApp"
             }
         }
     ]

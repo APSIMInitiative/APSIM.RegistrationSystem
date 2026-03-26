@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+    
         {
             "name": "RegistrationWebApp: Dotnet Watch",
             "type": "chrome",
@@ -28,11 +29,11 @@
             "name": "RegistrationWebApp: Debug",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "dotnet: build RegistrationWebApp",
             "program": "/bin/Debug/net10.0/RegistrationWebApp.dll",
             "console": "integratedTerminal",
             "requireExactSource": true,
-            "cwd":"${workspaceFolder}/RegistrationWebApp"
+            "cwd":"${workspaceFolder}/RegistrationWebApp",
+            "preLaunchTask": "dotnet: watch RegistrationWebApp",
         },
         {
             "name": "RegistrationWebAPI: Debug",
