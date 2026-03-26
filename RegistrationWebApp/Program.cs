@@ -1,6 +1,9 @@
 using RegistrationWebApp.Components;
+using RegistrationWebApp.Components.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
+
+WebApiUtility.Configure(builder.Configuration["WebApi:BaseUrl"]);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
