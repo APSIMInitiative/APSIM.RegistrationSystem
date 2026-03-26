@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace APSIM.RegistrationAPIV2.Data;
+namespace RegistrationWebAPI.Data;
 
 public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> options) : DbContext(options)
 {

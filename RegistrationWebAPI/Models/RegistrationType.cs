@@ -1,4 +1,4 @@
-namespace APSIM.RegistrationAPIV2.Models;
+namespace RegistrationWebAPI.Models;
 
 public enum RegistrationType
 {

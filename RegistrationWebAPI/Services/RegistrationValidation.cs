@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using APSIM.RegistrationAPIV2.Models;
+using RegistrationWebAPI.Models;
 
-namespace APSIM.RegistrationAPIV2.Services;
+namespace RegistrationWebAPI.Services;
 
 public static class RegistrationValidation
 {

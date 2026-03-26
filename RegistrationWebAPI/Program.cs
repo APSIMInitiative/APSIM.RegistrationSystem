@@ -1,7 +1,7 @@
-using APSIM.Registration.Contracts.Enums;
-using APSIM.RegistrationAPIV2.Data;
-using APSIM.RegistrationAPIV2.Models;
-using APSIM.RegistrationAPIV2.Services;
+using RegistrationShared.Enums;
+using RegistrationWebAPI.Data;
+using RegistrationWebAPI.Models;
+using RegistrationWebAPI.Services;
 using dotenv.net;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace APSIM.Registration.Contracts.Enums;
+namespace RegistrationShared.Enums;
 
 public enum AnnualTurnover
 {

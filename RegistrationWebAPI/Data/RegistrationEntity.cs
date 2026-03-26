@@ -1,7 +1,8 @@
-using APSIM.Registration.Contracts.Enums;
-using APSIM.RegistrationAPIV2.Models;
+using RegistrationShared.Enums;
+using RegistrationShared.Models;
+using RegistrationWebAPI.Models;
 
-namespace APSIM.RegistrationAPIV2.Data;
+namespace RegistrationWebAPI.Data;
 
 public class RegistrationEntity
 {

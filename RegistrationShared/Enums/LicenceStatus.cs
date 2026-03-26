@@ -1,4 +1,5 @@
-namespace APSIM.Registration.Contracts.Enums;
+
+namespace RegistrationShared.Enums;
 
 public enum LicenceStatus
 {

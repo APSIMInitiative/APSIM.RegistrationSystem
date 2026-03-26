@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace APSIM.RegistrationAPIV2.Migrations
+namespace RegistrationWebAPI.Migrations
 {
     /// <inheritdoc />
     public partial class InitialRegistrationSchema : Migration

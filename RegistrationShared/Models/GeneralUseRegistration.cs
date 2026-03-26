@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using APSIM.Registration.Contracts.Enums;
-using APSIM.Registration.Contracts.Interfaces;
+using RegistrationShared.Enums;
+using RegistrationShared.Interfaces;
 
-namespace APSIM.Registration.Contracts.Models;
+namespace RegistrationShared.Models;
 
 public class GeneralUseRegistration : IRegistration
 {

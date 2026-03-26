@@ -1,8 +1,8 @@
-using APSIM.Registration.Contracts.Enums;
-using APSIM.RegistrationAPIV2.Data;
-using APSIM.RegistrationAPIV2.Models;
+using RegistrationShared.Enums;
+using RegistrationWebAPI.Data;
+using RegistrationWebAPI.Models;
 
-namespace APSIM.RegistrationAPIV2.Services;
+namespace RegistrationWebAPI.Services;
 
 public static class RegistrationMapping
 {

@@ -1,5 +1,5 @@
 
-namespace APSIM.RegistrationAPIV2.Models;
+namespace RegistrationWebAPI.Models;
 
 public class RegistrationErrorResponse
 {

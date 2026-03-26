@@ -4,8 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>APSIM.RegistrationAPIV2
-    </RootNamespace>
+    <RootNamespace>RegistrationWebAPI</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,13 +19,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="APSIM.Registration.Contracts\APSIM.Registration.Contracts.csproj" />
+    <ProjectReference Include="..\RegistrationShared\RegistrationShared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- <ItemGroup>
     <Compile Remove="APSIM.Registration.Contracts\**\*.cs" />
     <EmbeddedResource Remove="APSIM.Registration.Contracts\**\*" />
     <None Remove="APSIM.Registration.Contracts\**\*" />
-  </ItemGroup>
+  </ItemGroup> -->
 
 </Project>

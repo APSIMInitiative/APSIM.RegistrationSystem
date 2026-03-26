@@ -1,4 +1,4 @@
-namespace APSIM.Registration.Contracts.Interfaces;
+namespace RegistrationShared.Interfaces;
 
 public interface IRegistration
 {

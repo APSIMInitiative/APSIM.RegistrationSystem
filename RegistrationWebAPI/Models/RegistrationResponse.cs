@@ -1,6 +1,6 @@
-using APSIM.Registration.Contracts.Enums;
+using RegistrationShared.Enums;
 
-namespace APSIM.RegistrationAPIV2.Models;
+namespace RegistrationWebAPI.Models;
 
 public class RegistrationResponse
 {

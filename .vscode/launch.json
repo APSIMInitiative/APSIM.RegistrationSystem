@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Watch RegistrationWebApp",
+            "name": "RegistrationWebApp: Dotnet Watch",
             "type": "chrome",
             "request": "launch",
             "url": "http://localhost:5012", // Check launchSettings.json for correct URL/Port
@@ -25,23 +25,36 @@
         },
         {
             //This is helpful for debugging with breakpoints.
-            "name": "Debug RegistrationWebApp",
+            "name": "RegistrationWebApp: Debug",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "dotnet: build",
+            "preLaunchTask": "dotnet: build RegistrationWebApp",
             "program": "/bin/Debug/net10.0/RegistrationWebApp.dll",
-            "args": [],
             "console": "integratedTerminal",
             "requireExactSource": true,
             "cwd":"${workspaceFolder}/RegistrationWebApp"
+        },
+        {
+            "name": "RegistrationWebAPI: Debug",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "/bin/Debug/net10.0/RegistrationWebAPI.dll",
+            "console": "integratedTerminal",
+            "requireExactSource": true,
+            "cwd":"${workspaceFolder}/RegistrationWebAPI",
+            "preLaunchTask": "dotnet: build RegistrationWebAPI",
         }
     ],       
     "compounds": [
         {
-            "name": "Run & Debug with Hot Reload",
-            "configurations": [ "Watch RegistrationWebApp", "Attach Blazor Debug Proxy"],
-            "stopAll": true,
-            
+            "name": "RegistrationWebApp: Debug (Hot Reload)",
+            "configurations": [ "RegistrationWebApp: Dotnet Watch", "Attach Blazor Debug Proxy"],
+            "stopAll": true,           
+        },
+        {
+            "name": "API & WebApp: Debug",
+            "configurations": [ "RegistrationWebApp: Debug", "RegistrationWebAPI: Debug"],
+            "stopAll": true,           
         }
     ]
 }

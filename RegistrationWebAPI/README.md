@@ -1,4 +1,4 @@
-# APSIM Registration API v2
+# RegistrationWebApp
 
 A modern ASP.NET Core minimal Web API for managing general and special use registrations with JWT-based authentication and SQLite persistence.
 
