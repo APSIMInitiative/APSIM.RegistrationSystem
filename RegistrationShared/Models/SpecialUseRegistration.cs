@@ -33,4 +33,12 @@ public class SpecialUseRegistration : IRegistration
     public DateTime ApplicationDate { get; set; } = DateTime.UtcNow;
 
     public LicenceStatus LicenceStatus { get; set; } = LicenceStatus.SpecialAwaitingReview;
+
+    /// <summary>
+    /// Indicates whether the applicant agrees to the terms and conditions of 
+    /// the special use registration. This is a required field and must 
+    /// be true for the application to be valid.
+    /// </summary>
+    [Required(ErrorMessage = "You must agree to the terms and conditions.")]
+    public bool AgreesToTerms { get; set; }
 }
