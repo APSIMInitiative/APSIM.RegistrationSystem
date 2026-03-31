@@ -5,11 +5,16 @@
 @using RegistrationWebApp.Components.Classes.Utilities;
 @using System.Runtime.CompilerServices
 @using System.Diagnostics.Eventing.Reader
+@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+@using RegistrationWebApp.Components.Utilities
+@using Microsoft.Extensions.Logging
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/register/{ProductId?}"
 @*This page allows users to select a product licence and register for it. The content of the page changes based on the selected product.*@
 @rendermode InteractiveServer
+@inject ILogger<Register> Logger
+@inject WebApiUtility WebApiUtility
 
 <PageTitle>Pick Product Licence</PageTitle>
 <p>Test</p>
@@ -110,7 +115,7 @@
         </div>
         <div class="special-use-licence-choice-row row mt-4">
             <div class="col-md-6 offset-md-3 mb-4">
-                <EditForm Model="@specialUseRegistration" OnValidSubmit="SubmitApplication" FormName="specialUseRegistrationForm">
+                <EditForm Model="@specialUseRegistration" OnValidSubmit="() => SubmitApplication(specialUseRegistration)" FormName="specialUseRegistrationForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
                     <div class="row mb-3">
@@ -147,8 +152,10 @@
                         <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="specialUseRegistration!.LicenceStatus">
                             <option value="@LicenceStatus.SpecialAwaitingReview" selected disabled>@LicenceStatus.SpecialAwaitingReview.GetDescription()</option>
                         </InputSelect >
-                        <label class="form-check-label mb-2">You must read and agree to the terms and conditions to submit your application.</label>
-                        <InputCheckbox class="form-check mb-2" @bind-Value="specialUseRegistration!.AgreesToTerms" >I agree to the terms and conditions</InputCheckbox>
+                        <label class="form-check-label mb-2">I have read and agree to the Special Use licence terms. 
+                            Please note that final licence classification is confirmed by the APSIM Initiative.
+                        </label>
+                        <InputCheckbox class="form-check mb-2" @bind-Value="specialUseRegistration!.AgreesToTerms"></InputCheckbox>
                         <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
                     </div>
                     <div class="row text-center">
@@ -164,50 +171,35 @@
 <div class="general-registration-form-row row " hidden="@(!isGeneralUseRegistrationVisible)">
     <div class="col-md-6 offset-md-3 mt-5 mb-5 p-4 border border-success rounded">
         <h2 class="text-center">General Use Registration</h2>
-        <EditForm Model="@generalUseRegistration" OnValidSubmit="SubmitApplication" FormName="generalUseRegistrationForm">
+        <EditForm Model="@generalUseRegistration" OnValidSubmit="() => SubmitApplication(generalUseRegistration)" FormName="generalUseRegistrationForm">
             <DataAnnotationsValidator />
             <ValidationSummary />
-            <div class="row mb-3">
+            <div class="row mb-3 text-center">
                 <InputText class="form-control mb-2" Placeholder="Email" @bind-Value="generalUseRegistration!.ContactEmail" />
                 <ValidationMessage For="@(() => generalUseRegistration.ContactEmail)" />
-            </div>
-            <div class="row mb-3">
                 <InputText class="form-control mb-2" Placeholder="Contact Name" @bind-Value="generalUseRegistration!.ContactName" />
                 <ValidationMessage For="@(() => generalUseRegistration.ContactName)" />
-            </div>
-            <div class="row mb-3">
-                <InputSelect @bind-Value="generalUseRegistration!.LicenceStatus" class="form-control mb-2">
-                    <option value="@LicenceStatus.GeneralUse" selected disabled>@LicenceStatus.GeneralUse.GetDescription()</option>
+                <InputSelect hidden @bind-Value="generalUseRegistration!.LicenceStatus" 
+                    class="form-control mb-2">
+                    <option value="@LicenceStatus.GeneralUse" 
+                        selected 
+                        disabled>@LicenceStatus.GeneralUse.GetDescription()
+                    </option>
                 </InputSelect>
+                <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
+                <label class="form-check-label mb-2" >I have read and agree to the General Use licence terms</label>
+                <InputCheckbox class="form-check mb-2" 
+                    @bind-Value="generalUseRegistration!.AgreesToTerms" >
+                </InputCheckbox>
             </div>
-            <div class="row text-center">
-                <button type="submit" class="btn btn-success">Submit Application</button>
-            </div>
-            <div class="row text-center">
-
-            </div>
-            <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
+            <Row CustomRowClasses="text-center">
+                <Col>
+                    <button type="submit" class="btn btn-success">Submit Application</button>
+                </Col>
+            </Row>
         </EditForm>
     </div>
 </div>
-
-@* <div class="pdf-div mt-4 mb-4 border border-success rounded p-4" hidden="@(!isGeneralUseLicenceVisible)">
-    <h2 class="text-center">Licence Details</h2>
-    <div class="row">
-        <div class="col-md-6 text-center">
-            <iframe src=/Documents/APSIM_General_Use_Licence.pdf width="100%"></iframe>
-        </div>
-    </div>
-</div> *@
-
-@* <div class="pdf-div mt-4 mb-4 border border-success rounded p-4" hidden="@(!isSpecialUseLicenceVisible)">
-    <h2 class="text-center">Licence Details</h2>
-    <div class="row">
-        <div class="col-md-6 text-center">
-            <iframe src=/Documents/APSIM_Special_Use_Licence.pdf width="100%"></iframe>
-        </div>
-    </div>
-</div> *@
 
 <CustomModal @bind-IsOpen="showModal" Title="Application Submitted">
     <p>Thank you for your application. We will review your submission and contact you via email with the next steps.</p>
@@ -300,21 +292,11 @@
     }
 
 
-    private async Task SubmitApplication()
+    private async Task SubmitApplication(IRegistration registration)
     {
-        // Logic for handling form submission can be added here.  
-        // TODO: send form data to backend for processing and storage
-        if (isGeneralUseRegistrationVisible)
-        {
-            Console.WriteLine("General Use Registration Submitted:");
-            Console.WriteLine(generalUseRegistration.ToString());
-        }
-        else if (isSpecialUseRegistrationVisible)
-        {
-            Console.WriteLine("Special Use Registration Submitted:");
-            Console.WriteLine(specialUseRegistration.ToString());
-        }
-
+        Logger.LogInformation($"Submitting application for {registration.ContactEmail}");
+        await WebApiUtility.CreateRegistrationAsync(specialUseRegistration);
+        OpenModal();
     }
 
     private bool isSpecialUseRegistrationVisible = false;
