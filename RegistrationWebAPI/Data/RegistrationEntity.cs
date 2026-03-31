@@ -29,4 +29,6 @@ public class RegistrationEntity
     public LicencePathway? LicencePathway { get; set; }
 
     public AnnualTurnover? AnnualTurnover { get; set; }
+
+    public bool AgreesToTerms { get; set; }
 }
