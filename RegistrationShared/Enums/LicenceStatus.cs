@@ -4,6 +4,7 @@ namespace RegistrationShared.Enums;
 public enum LicenceStatus
 {
     None,
+    AwaitingEmailVerification,
     GeneralUse,
     SpecialAwaitingReview,
     SpecialProvisional,
