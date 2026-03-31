@@ -1,58 +1,77 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "dotnet watch run",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "watch",
-                "run",
-                "--project",
-                "RegistrationWebApp.csproj"
-            ],
-            "problemMatcher": "$msCompile",
-            "isBackground": true,
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared"
-            },
-            "options": {
-                "cwd": "${workspaceFolder}/RegistrationWebApp"
-            }
-        },
-        {
-            "label": "just watch RegistrationWebApp",
-            "type": "dotnet",
-            "task": "watch RegistrationWebApp",
-            "file": "RegistrationWebApp.csproj",
-            "problemMatcher": "$msCompile",
-            "options": {
-                "cwd": "${workspaceFolder}/RegistrationWebApp"
-            }
-        },
-        {
-            "label": "dotnet: build RegistrationWebAPI",
-            "type": "dotnet",
-            "task": "build",
-            "problemMatcher": "$msCompile",
-            "options": {
-                "cwd": "${workspaceFolder}/RegistrationWebAPI"
-            }
-        },
-        {
-            "type": "dotnet",
-            "task": "build",
-            "file": "RegistrationWebApp.csproj",
-            "problemMatcher": [],
-            "label": "dotnet: build RegistrationWebApp",
-            "options": {
-                "cwd": "${workspaceFolder}/RegistrationWebApp"
-            }
-        }
-    ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Dotnet Watch RegistrationWebApp",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"watch",
+				"run",
+				"--project",
+				"RegistrationWebApp.csproj"
+			],
+			"problemMatcher": "$msCompile",
+			"isBackground": true,
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"options": {
+				"cwd": "${workspaceFolder}/RegistrationWebApp"
+			}
+		},
+		{
+			"label": "Just Watch RegistrationWebApp",
+			"type": "dotnet",
+			"task": "watch RegistrationWebApp",
+			"file": "RegistrationWebApp.csproj",
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/RegistrationWebApp"
+			}
+		},
+		{
+			"label": "Build WebApp",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"RegistrationWebApp.csproj"
+			],
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/RegistrationWebApp"
+			}
+		},
+		{
+			"label": "Build WebApi",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"RegistrationWebAPI.csproj"
+			],
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/RegistrationWebAPI"
+			}
+		},
+		{
+			"label": "Build All Projects",
+			"type": "shell",
+			"command": "dotnet build",
+			"options":{
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": "$msCompile",
+			"group": {
+				"kind": "build",
+			}
+		},
+	]
 }

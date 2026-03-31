@@ -1,9 +1,8 @@
 {
     "version": "0.2.0",
     "configurations": [
-    
         {
-            "name": "RegistrationWebApp: Dotnet Watch",
+            "name": "Watch RegistrationWebApp",
             "type": "chrome",
             "request": "launch",
             "url": "http://localhost:5012", // Check launchSettings.json for correct URL/Port
@@ -14,7 +13,12 @@
                 "pattern": "Application started. Press Ctrl+C to shut down.",
                 "uriFormat": "http://localhost:5012"
             },
-            "preLaunchTask": "dotnet watch run",
+            "preLaunchTask": "Dotnet Watch RegistrationWebApp",
+            "presentation": {
+                "hidden": false,
+                "group": "Hot Reload",
+                "order": 1
+            }
         },
         {
             "name": "Attach Blazor Debug Proxy",
@@ -23,39 +27,79 @@
             "timeout": 60000,
             "internalConsoleOptions": "neverOpen",
             "url": "http://localhost:5012", // Must match the URL in the other config
+            "presentation": {
+                "hidden": true,
+                "group": "Hot Reload",
+                "order": 1
+            }
         },
         {
             //This is helpful for debugging with breakpoints.
-            "name": "RegistrationWebApp: Debug",
+            "name": "Debug RegistrationWebApp",
             "type": "coreclr",
             "request": "launch",
             "program": "/bin/Debug/net10.0/RegistrationWebApp.dll",
             "console": "integratedTerminal",
             "requireExactSource": true,
             "cwd":"${workspaceFolder}/RegistrationWebApp",
-            "preLaunchTask": "dotnet: watch RegistrationWebApp",
+            "preLaunchTask": "Build WebApp",
+            // Launches the app in your default browser when the API is ready.
+            "serverReadyAction":{
+                "action": "openExternally",
+                "pattern": "Now listening on: (https?://\\S+)",
+                "killOnServerStop": true
+            },
         },
         {
-            "name": "RegistrationWebAPI: Debug",
+            "name": "Debug RegistrationWebAPI",
             "type": "coreclr",
             "request": "launch",
             "program": "/bin/Debug/net10.0/RegistrationWebAPI.dll",
             "console": "integratedTerminal",
             "requireExactSource": true,
             "cwd":"${workspaceFolder}/RegistrationWebAPI",
-            "preLaunchTask": "dotnet: build RegistrationWebAPI",
+            "preLaunchTask": "Build WebApi",
+            // Opens the Swagger UI in the browser when the API is ready. 
+            "serverReadyAction":{
+                "action": "openExternally",
+                "pattern": "Now listening on: (https?://\\S+)",
+                "uriFormat": "%s/swagger",
+                "killOnServerStop": true
+            }
+        },
+        {
+            "name": "Debug RegistrationWebApp after WebApi",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "/bin/Debug/net10.0/RegistrationWebApp.dll",
+            "console": "integratedTerminal",
+            "requireExactSource": true,
+            "cwd":"${workspaceFolder}/RegistrationWebApp",
+            "preLaunchTask": "Build All Projects",
         }
+
     ],       
     "compounds": [
         {
             "name": "RegistrationWebApp: Debug (Hot Reload)",
-            "configurations": [ "RegistrationWebApp: Dotnet Watch", "Attach Blazor Debug Proxy"],
-            "stopAll": true,           
+            "configurations": [ "Watch RegistrationWebApp", "Attach Blazor Debug Proxy"],
+            "stopAll": true,    
+            "presentation": {
+                "hidden": false,
+                "group": "Hot Reload",
+                "order": 1
+            }       
         },
         {
-            "name": "API & WebApp: Debug",
-            "configurations": [ "RegistrationWebApp: Debug", "RegistrationWebAPI: Debug"],
-            "stopAll": true,           
+            "name": "Debug WebAPI & WebApp",
+            "configurations": [ "Debug RegistrationWebAPI", "Debug RegistrationWebApp"],
+            "stopAll": true, 
+            "preLaunchTask": "Build All Projects",
+            "presentation": {
+                "hidden": false,
+                "group": "Dual Debug Configurations",
+                "order": 1
+            }
         }
     ]
 }
