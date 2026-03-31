@@ -3,37 +3,18 @@ using System.Text.Json;
 using RegistrationWebApp.Components.Utilities.Models;
 using RegistrationShared.Interfaces;
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Configuration;
 
 namespace RegistrationWebApp.Components.Utilities;
 
-public static class WebApiUtility
+public class WebApiUtility
 {
-    /// <summary>A static HttpClient instance configured with the base URL for the web API.</summary>
-    private static HttpClient? _client;
+    private readonly HttpClient _client;
+    private readonly string _baseUrl;
+    private readonly string? _configuredUsername;
+    private readonly string? _configuredPassword;
 
-    /// <summary>Gets the HttpClient instance, initializing it if necessary. 
-    /// The HttpClient is configured with the base URL for the web API, which 
-    /// can be set via an environment variable or configuration. 
-    /// If the base URL changes, the HttpClient will be reconfigured to use 
-    /// the new base URL.</summary>
-    private static HttpClient Client { 
-        get
-        {
-            if (_client == null)
-            {
-                _client = new HttpClient { BaseAddress = new Uri(GetBaseUrl()) };
-            }
-            return _client;
-
-        }
-        set{
-            // Ensure the HttpClient has the correct base address set
-            value.BaseAddress = new Uri(GetBaseUrl());
-            Client = value;
-        } 
-    }
-
-    private static string AuthenticationToken { get; set; } = string.Empty;
+    private string AuthenticationToken { get; set; } = string.Empty;
 
     private const string AuthTokenEndpoint = "api/auth/token";
     private const string RegistrationEndpoint = "api/registrations";
@@ -44,17 +25,17 @@ public static class WebApiUtility
 
     /// <summary>The base URL for the web API, which can be set via 
     /// configuration or overridden by an environment variable.</summary>
-    private static string? configuredBaseUrl;
+    private string? configuredBaseUrl;
 
     /// <summary> The username for authenticating with the web API, 
     /// which can be set via configuration or overridden by 
     /// an environment variable.</summary>
-    private static string? AuthenticationUsername { get; set; }
+    private string? AuthenticationUsername { get; set; }
 
     /// <summary> The password for authenticating with the web API, 
     /// which can be set via configuration or overridden 
     /// by an environment variable.</summary>
-    private static string? AuthenticationPassword { get; set; }
+    private string? AuthenticationPassword { get; set; }
 
     /// <summary>
     /// /// The name of the environment variable that can be used to set the username for authenticating with the web API.
@@ -64,17 +45,30 @@ public static class WebApiUtility
     /// <summary> The name of the environment variable that can be used to set the password for authenticating with the web API.</summary>
     private const string AuthenticationPasswordEnvironmentVariable = "WEB_API_PASSWORD";
 
+    public WebApiUtility(IConfiguration configuration)
+    {
+        Configure(
+            configuration["WebApi:BaseUrl"],
+            configuration["WebApi:Username"],
+            configuration["WebApi:Password"]);
+
+        _baseUrl = GetBaseUrl();
+        _configuredUsername = AuthenticationUsername;
+        _configuredPassword = AuthenticationPassword;
+        _client = new HttpClient { BaseAddress = new Uri(_baseUrl) };
+    }
+
     /// <summary> Configures the web API utility with a base URL from configuration. 
     /// This can be overridden by setting the WEB_API_URL environment variable.
     /// </summary>
     /// <param name="baseUrl">The base URL from configuration.</param>
     /// <param name="username">The username for authenticating with the web API.</param>
     /// <param name="password">The password for authenticating with the web API.</param>
-    public static void Configure(string? baseUrl, string? username = null, string? password = null)
+    public void Configure(string? baseUrl, string? username = null, string? password = null)
     {
         configuredBaseUrl = baseUrl;
 
-        if (username != null)
+        if (!string.IsNullOrEmpty(username))
         {
             AuthenticationUsername = username;
         }
@@ -94,6 +88,9 @@ public static class WebApiUtility
     }
 
     /// <summary> Gets the authentication username from the environment variable.
+    /// </summary>
+    /// <param name="envName">The name of the environment variable.</param>
+    /// <returns>The value of the environment variable, or null if not set.</returns>
     private static string? GetValueFromEnvironmentVariable(string envName)
     {
         return Environment.GetEnvironmentVariable(envName);
@@ -104,7 +101,7 @@ public static class WebApiUtility
     /// </summary>
     /// <returns>Configuration string value or null if not set.</returns>
 
-    public static string? GetBaseUrlFromConfiguration()
+    public string? GetBaseUrlFromConfiguration()
     {
         return configuredBaseUrl;
     }
@@ -113,7 +110,7 @@ public static class WebApiUtility
     /// Throws an exception if neither is set.
     /// </summary>
     /// <returns>The web API base URL.</returns>
-    public static string GetBaseUrl()
+    public string GetBaseUrl()
     {
         return GetValueFromEnvironmentVariable(WebApiUrlEnvironmentVariable)
             ?? GetBaseUrlFromConfiguration()
@@ -125,25 +122,37 @@ public static class WebApiUtility
     /// </summary>
     /// <param name="endpoint">The endpoint path to append to the base URL.</param>
     /// <returns>The full URL for the specified endpoint.</returns>
-    public static string GetEndpointUrl(string endpoint)
+    public string GetEndpointUrl(string endpoint)
     {
-        return new Uri(new Uri(GetBaseUrl()), endpoint).ToString();
+        return new Uri(new Uri(_baseUrl), endpoint).ToString();
     }
 
     /// <summary> Gets an authentication token from the web API using the configured username and password.
     /// This method sends a request to the authentication endpoint of the web API and retrieves a JWT token that can be used for authenticated requests.
     /// </summary> <returns>A JWT token string that can be used for authenticating requests to the web API.</returns>
-    public static async Task<string> GetAuthenticationToken()
+    public async Task<string> GetAuthenticationToken()
     {
-        string authenticationEndpoint = GetEndpointUrl("api/auth/token");
-        Login login = new(AuthenticationUsername ?? throw new InvalidOperationException("Authentication username is not configured."), 
-            AuthenticationPassword ?? throw new InvalidOperationException("Authentication password is not configured."));
+        if (!string.IsNullOrWhiteSpace(AuthenticationToken))
+        {
+            return AuthenticationToken;
+        }
+
+        var username = _configuredUsername
+            ?? throw new InvalidOperationException("Authentication username is not configured.");
+        var password = _configuredPassword
+            ?? throw new InvalidOperationException("Authentication password is not configured.");
+
+        string authenticationEndpoint = GetEndpointUrl(AuthTokenEndpoint);
+        Login login = new(username, password);
         string body = JsonSerializer.Serialize(login);
-        HttpResponseMessage response = await Client.PostAsync(authenticationEndpoint, 
+        HttpResponseMessage response = await _client.PostAsync(authenticationEndpoint,
             new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync();
-    } 
+        using var jsonDocument = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        AuthenticationToken = jsonDocument.RootElement.GetProperty("accessToken").GetString()
+            ?? throw new InvalidOperationException("Authentication response did not include an access token.");
+        return AuthenticationToken;
+    }
 
 
     /// <summary>
@@ -165,16 +174,27 @@ public static class WebApiUtility
     /// </summary>
     /// <returns>A list of IRegistration objects representing the 
     /// registrations retrieved from the web API.</returns>
-    public static async Task<List<IRegistration>> GetRegistrationsAsync()
+    public async Task<List<IRegistration>> GetRegistrationsAsync()
     {
         string token = await GetAuthenticationToken();
-        AuthenticateRequest(Client, token);
-        HttpResponseMessage response = await Client.GetAsync(RegistrationEndpoint);
+        AuthenticateRequest(_client, token);
+        HttpResponseMessage response = await _client.GetAsync(RegistrationEndpoint);
         response.EnsureSuccessStatusCode();
         string content = await response.Content.ReadAsStringAsync();
         return JsonSerializer
             .Deserialize<List<IRegistration>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })?
             .Cast<IRegistration>()
             .ToList() ?? new List<IRegistration>();
+    }
+
+    public async Task<string> CreateRegistrationAsync(IRegistration registration)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        string body = JsonSerializer.Serialize(registration);
+        HttpResponseMessage response = await _client.PostAsync(RegistrationEndpoint,
+            new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync();
     }
 }

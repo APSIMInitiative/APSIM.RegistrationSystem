@@ -1,15 +1,21 @@
+using dotenv.net;
 using RegistrationWebApp.Components;
 using RegistrationWebApp.Components.Utilities;
 
+DotEnv.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
-WebApiUtility.Configure(builder.Configuration["WebApi:BaseUrl"]);
+builder.Services.AddSingleton<WebApiUtility>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+// Force service construction on startup so WebApiUtility configuration is initialized.
+_ = app.Services.GetRequiredService<WebApiUtility>();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
