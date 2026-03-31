@@ -3,6 +3,7 @@ using RegistrationWebAPI.Data;
 using RegistrationWebAPI.Models;
 using RegistrationWebAPI.Services;
 using dotenv.net;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -37,6 +38,14 @@ builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+	options.SwaggerDoc("v1", new OpenApiInfo
+	{
+		Version = "v1",
+		Title = "APSIM Registration API",
+		Description = "API for managing registrations in the APSIM Registration System.",
+
+	});
+
 	options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
 	{
 		Name = "Authorization",
@@ -86,7 +95,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
 	app.UseSwagger();
-	app.UseSwaggerUI();
+	app.UseSwaggerUI(options =>
+	{
+		options.SwaggerEndpoint("/swagger/v1/swagger.json", "APSIM Registration API v1");
+		options.DocumentTitle = "APSIM Registration API Documentation";
+	});
 }
 
 app.UseHttpsRedirection();
@@ -212,7 +225,8 @@ registrations.MapGet("/{id:guid}", async (Guid id, RegistrationDbContext db) =>
 	.Produces<RegistrationResponse>(StatusCodes.Status200OK)
 	.Produces(StatusCodes.Status404NotFound);
 
-registrations.MapPost("/", async (RegistrationUpsertRequest request, RegistrationDbContext db) =>
+// --- Add Registration Endpoint ---
+registrations.MapPost("/", async (RegistrationUpsertRequest request, RegistrationDbContext db, ILogger<Program> logger) =>
 {
 	var errors = RegistrationValidation.Validate(request);
 	if (errors.Count > 0)
@@ -220,18 +234,71 @@ registrations.MapPost("/", async (RegistrationUpsertRequest request, Registratio
 		return Results.ValidationProblem(errors);
 	}
 
-	var entity = RegistrationMapping.ToNewEntity(request);
-	db.Registrations.Add(entity);
-	await db.SaveChangesAsync();
+	try
+	{
+		var entity = RegistrationMapping.ToNewEntity(request);
+		db.Registrations.Add(entity);
+		await db.SaveChangesAsync();
 
-	var response = RegistrationMapping.ToResponse(entity);
-	return Results.Created($"/api/registrations/{entity.Id}", response);
+		var response = RegistrationMapping.ToResponse(entity);
+		return Results.Created($"/api/registrations/{entity.Id}", response);
+	}
+	catch (DbUpdateException ex) when (ex.InnerException is SqliteException sqliteEx)
+	{
+		logger.LogError(ex, "Failed to create registration for {ContactEmail}. SQLiteErrorCode: {SQLiteErrorCode}", request.ContactEmail, sqliteEx.SqliteErrorCode);
+
+		var errorResponse = new RegistrationErrorResponse
+		{
+			Message = "Registration could not be created because of a database constraint or data persistence error.",
+			Errors = new Dictionary<string, string[]>
+			{
+				["database"] =
+				[
+					sqliteEx.Message,
+					$"SQLiteErrorCode: {sqliteEx.SqliteErrorCode}"
+				]
+			}
+		};
+
+		return Results.Json(errorResponse, statusCode: StatusCodes.Status500InternalServerError);
+	}
+	catch (DbUpdateException ex)
+	{
+		logger.LogError(ex, "Failed to create registration for {ContactEmail}.", request.ContactEmail);
+
+		var errorResponse = new RegistrationErrorResponse
+		{
+			Message = "Registration could not be created due to a data persistence error.",
+			Errors = new Dictionary<string, string[]>
+			{
+				["database"] = [ex.InnerException?.Message ?? ex.Message]
+			}
+		};
+
+		return Results.Json(errorResponse, statusCode: StatusCodes.Status500InternalServerError);
+	}
+	catch (Exception ex)
+	{
+		logger.LogError(ex, "Unexpected failure while creating registration for {ContactEmail}.", request.ContactEmail);
+
+		var errorResponse = new RegistrationErrorResponse
+		{
+			Message = "An unexpected error occurred while creating the registration.",
+			Errors = new Dictionary<string, string[]>
+			{
+				["server"] = [ex.Message]
+			}
+		};
+
+		return Results.Json(errorResponse, statusCode: StatusCodes.Status500InternalServerError);
+	}
 })
 	.WithName("CreateRegistration")
     .WithDescription("Creates a new registration.")
     .WithSummary("Create Registration")
 	.Produces<RegistrationResponse>(StatusCodes.Status201Created)
-	.ProducesValidationProblem();
+	.ProducesValidationProblem()
+	.Produces<RegistrationErrorResponse>(StatusCodes.Status500InternalServerError);
 
 registrations.MapPut("/{id:guid}", async (Guid id, RegistrationUpsertRequest request, RegistrationDbContext db) =>
 {
@@ -256,7 +323,7 @@ registrations.MapPut("/{id:guid}", async (Guid id, RegistrationUpsertRequest req
     .WithSummary("Update Registration")
     .WithDescription("Updates an existing registration by its unique identifier.")
 	.Produces<RegistrationResponse>(StatusCodes.Status200OK)
-	.ProducesValidationProblem()
+	.Produces<RegistrationErrorResponse>(StatusCodes.Status500InternalServerError)
 	.Produces(StatusCodes.Status404NotFound);
 
 registrations.MapDelete("/{id:guid}", async (Guid id, RegistrationDbContext db) =>
