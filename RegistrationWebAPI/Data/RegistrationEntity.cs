@@ -31,4 +31,8 @@ public class RegistrationEntity
     public AnnualTurnover? AnnualTurnover { get; set; }
 
     public bool AgreesToTerms { get; set; }
+
+    public string? EmailVerificationToken { get; set; }
+
+    public DateTime? EmailVerificationSentAtUtc { get; set; }
 }

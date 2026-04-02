@@ -1,9 +1,10 @@
-using System.Net.Http;
 using System.Text.Json;
 using RegistrationWebApp.Components.Utilities.Models;
 using RegistrationShared.Interfaces;
 using System.Net.Http.Headers;
-using Microsoft.Extensions.Configuration;
+using RegistrationShared.Models;
+using System.Net;
+using RegistrationWebApp.Components.Classes;
 
 namespace RegistrationWebApp.Components.Utilities;
 
@@ -187,14 +188,70 @@ public class WebApiUtility
             .ToList() ?? new List<IRegistration>();
     }
 
-    public async Task<string> CreateRegistrationAsync(IRegistration registration)
+    public async Task<ResponseModel> CreateRegistrationAsync(IRegistration registration)
     {
         string token = await GetAuthenticationToken();
         AuthenticateRequest(_client, token);
-        string body = JsonSerializer.Serialize(registration);
+        string body = GetRegistrationBody(registration);
         HttpResponseMessage response = await _client.PostAsync(RegistrationEndpoint,
             new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            return new ResponseModel { Message = "A registration with this email already exists." };
+        }
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync();
+
+        // Try to deserialize the response into a GeneralUseRegistration first, then a SpecialUseRegistration if that fails.
+        string responseContent = await response.Content.ReadAsStringAsync();
+        using var jsonDocument = JsonDocument.Parse(responseContent);
+        IRegistration? registrationModel;
+        if (jsonDocument.RootElement.GetProperty("organisationName").ValueKind != JsonValueKind.Null)      
+        {
+            registrationModel = JsonSerializer.Deserialize<SpecialUseRegistration>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        else registrationModel = JsonSerializer.Deserialize<GeneralUseRegistration>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return new ResponseModel { Message = "Registration successful.", Registration = registrationModel };
+    }
+
+    /// <summary>
+    /// Constructs the request body for creating a registration by serializing the appropriate registration model based on the licence status.
+    /// </summary>
+    /// <param name="registration">The registration object to be serialized.</param>
+    /// <returns>A JSON string representing the registration object.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the registration type is invalid.</exception>
+    private static string GetRegistrationBody(IRegistration registration)
+    {
+        string body = string.Empty;
+        if (registration.LicenceStatus == RegistrationShared.Enums.LicenceStatus.AwaitingEmailVerification)
+        {
+            body = JsonSerializer.Serialize(registration as GeneralUseRegistration);
+        }
+        else if (registration.LicenceStatus == RegistrationShared.Enums.LicenceStatus.SpecialAwaitingReview)
+        {
+            body = JsonSerializer.Serialize(registration as SpecialUseRegistration);
+        }
+        else
+        {
+            throw new InvalidOperationException("Invalid registration type.");
+        }
+        return body;
+    }
+
+    /// <summary>
+    /// Checks if a registration with the specified email already exists by retrieving the list of registrations from the web API and checking for a matching contact email.
+    /// </summary>
+    /// <param name="email">The email address to check for an existing registration.</param>
+    /// <returns>A task that represents the asynchronous operation. 
+    /// The task result contains a boolean indicating whether a registration with the specified email exists.</returns>
+    public async Task<bool> CheckRegistrationEmailAsync(string email)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        string endpoint = $"{RegistrationEndpoint}?contactEmail={email}";
+        HttpResponseMessage response = await _client.GetAsync(endpoint);
+        response.EnsureSuccessStatusCode();
+        string content = await response.Content.ReadAsStringAsync();
+        var registrationsJson = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return registrationsJson?.FirstOrDefault(r => r["contactEmail"].GetString() == email) != null;
     }
 }

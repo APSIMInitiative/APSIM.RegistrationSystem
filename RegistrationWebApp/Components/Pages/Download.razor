@@ -1,0 +1,152 @@
+@using Microsoft.AspNetCore.Components.Sections
+@using RegistrationWebApp.Components.Classes
+@using RegistrationWebApp.Components.Layout.CustomLayout
+@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+@using RegistrationWebApp.Components.Utilities
+@using RegistrationWebApp.Components.Utilities.Models
+
+@namespace RegistrationWebApp.Components.Pages
+
+@page "/download"
+@rendermode InteractiveServer
+@inject ILogger<Download> Logger
+@inject NavigationManager NavigationManager
+@inject WebApiUtility WebApiUtility
+@inject APSIMBuildsAPIUtility APSIMBuildsAPIUtility
+
+<PageTitle>Download</PageTitle>
+
+<Row CustomRowClasses="justify-content-center text-center mt-4">
+    <Col>
+        <h1>Confirm Email</h1>
+        <p>
+            Please enter the email address you used to register. If your email is
+            associated with a registration, you will be able to access the downloads page.
+        </p>
+        <Row CustomRowClasses="mt-4 mb-4">
+            <Col>
+                <EditForm Model="@EmailModel" OnValidSubmit="ShowDownloads" FormName="downloadForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="mb-3 w-25 mx-auto">
+                    @* <label for="registrationId" class="form-label">Registration email</label> *@
+                    <InputText class="form-control mb-2" placeholder="Enter your registration email" @bind-Value="EmailModel!.Email" />
+                </div>
+                <button type="submit" class="btn btn-primary">Show Downloads</button>
+                </EditForm>
+            </Col>
+        </Row>
+
+        <Row CustomRowClasses="mt-4 mb-4">
+            <select class="form-select w-25 mx-auto" aria-label="Select download type">
+                @* <option value="classic" @onclick="() => ShowClassicDownloads = true">APSIM Classic Downloads</option> *@
+                <option value="nextgen" selected >APSIM Next Generation Downloads</option>
+            </select>
+            <Col>
+                @* @if (ShowClassicDownloads)
+                {
+                    <h2>APSIM Classic Downloads</h2>
+                    @foreach (var downloadInfo in ClassicDownloadInfos)
+                    {
+                        @if (!downloadInfo.PullRequestID.HasValue)
+                        {
+                            <Card Title="@downloadInfo.Title" CustomCardClasses="mb-3">
+                                <p>Revision Number: @downloadInfo.RevisionNumber.ToString()</p>
+                                <p>Author: @downloadInfo.Author</p>
+                                <p>Bug Id: @downloadInfo.BugID.ToString()</p>
+                                <p>Pull Request ID: @downloadInfo.PullRequestID.ToString()</p>
+                                <button class="btn btn-primary" @onclick="() => NavigationManager.NavigateTo(APSIMBuildsAPIUtility.GetClassicBuildDownloadLink(downloadInfo.RevisionNumber!.Value), true)">Download</button>
+                            </Card>
+                        }
+                    }                              
+                } *@
+                @if (ShowNextGenDownloads)
+                {
+                    <h2>APSIM Next Generation Downloads</h2>
+                    @foreach (var downloadInfo in NextGenDownloadInfos)
+                    {
+                        <Card Title="@downloadInfo.Title" CustomCardClasses="mb-3">
+                            <p>Version: @downloadInfo.Version</p>
+                            <p>Revision: @downloadInfo.Revision</p>
+                            <p>Release Date: @downloadInfo.ReleaseDate.ToShortDateString()</p>  
+                            <p>Issue: @downloadInfo.Issue</p>
+                            <button class="btn btn-primary" @onclick="() => NavigationManager.NavigateTo(downloadInfo.InfoUrl, true)">More Info</button>
+                            <button class="btn btn-primary" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkDebian, true)">Download for Debian</button>
+                            <button class="btn btn-primary" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkWindows, true)">Download for Windows</button>
+                            <button class="btn btn-primary" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkMacOS, true)">Download for MacOS</button>
+                        </Card>
+                    }   
+                }
+            </Col>
+        </Row>
+    </Col>
+</Row>
+
+<CustomModal Title="@modalTitle" @bind-IsOpen="showModal">
+    <p>@modalMessage</p>
+</CustomModal>
+
+@code
+{
+    public EmailModel? EmailModel { get; set; } = new EmailModel();
+    private bool showModal = false;
+    private string modalTitle = string.Empty;
+    private string modalMessage = string.Empty;
+    private EditContext? EditContext { get; set; }
+
+    @* private List<APSIMClassicDownloadInfo> ClassicDownloadInfos { get; set; } = new List<APSIMClassicDownloadInfo>(); *@
+    private List<APSIMNextGenDownloadInfo> NextGenDownloadInfos { get; set; } = new List<APSIMNextGenDownloadInfo>();
+
+    @* private bool ShowClassicDownloads { get; 
+        set
+        {
+            if (ShowNextGenDownloads)
+                value = false;
+            else value = true;
+        }
+    } = true; *@
+
+    @* private bool ShowNextGenDownloads { get; 
+        set
+        {
+            if (ShowClassicDownloads)
+                value = false;
+            else value = true;
+        }
+    } = true; *@
+
+    private bool ShowNextGenDownloads { get; set; } = true;
+
+    private async Task ShowDownloads()
+    {
+        Logger.LogInformation("Checking if email can download files: {Email}", EmailModel!.Email);
+        if (string.IsNullOrWhiteSpace(EmailModel!.Email))
+        {
+            Logger.LogWarning("No email provided. Cannot show downloads.");
+            ShowModal("Email required", "Please enter an email address to access the downloads.");
+            return;
+        }
+        bool canDownload = await WebApiUtility.CheckRegistrationEmailAsync(EmailModel!.Email);
+        if (canDownload)
+        {
+            var NextGenDownloadInfos = await APSIMBuildsAPIUtility.GetAPSIMNextGenBuildsListAsync();
+            var ClassicDownloadInfos = await APSIMBuildsAPIUtility.GetAPSIMClassicBuildsListAsync();
+        }
+        else
+        {
+            Logger.LogWarning("Email {Email} is not associated with a registration. Cannot show downloads.", EmailModel!.Email);
+            // Optionally, you could display a message to the user here indicating that the email is not valid for downloads.
+            ShowModal("Email not associated with a registration", "The email you entered is not valid for downloads.");
+        }
+    }
+
+    private void ShowModal(string title, string message)
+    {
+        modalTitle = title;
+        modalMessage = message;
+        showModal = true;
+    }
+
+
+
+}

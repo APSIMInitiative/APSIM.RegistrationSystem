@@ -7,7 +7,9 @@
 @using System.Diagnostics.Eventing.Reader
 @using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
 @using RegistrationWebApp.Components.Utilities
+@using RegistrationWebApp.Components.Classes;
 @using Microsoft.Extensions.Logging
+@using RegistrationWebApp.Components.Utilities.Models
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/register/{ProductId?}"
@@ -17,7 +19,6 @@
 @inject WebApiUtility WebApiUtility
 
 <PageTitle>Pick Product Licence</PageTitle>
-<p>Test</p>
 <div class="row mt-4">
     <div class="col">
         <h1 class="text-center">@PageHeading</h1>
@@ -181,9 +182,8 @@
                 <ValidationMessage For="@(() => generalUseRegistration.ContactName)" />
                 <InputSelect hidden @bind-Value="generalUseRegistration!.LicenceStatus" 
                     class="form-control mb-2">
-                    <option value="@LicenceStatus.GeneralUse" 
-                        selected 
-                        disabled>@LicenceStatus.GeneralUse.GetDescription()
+                    <option value="@LicenceStatus.AwaitingEmailVerification" selected disabled>
+                        @LicenceStatus.GeneralUse.GetDescription()
                     </option>
                 </InputSelect>
                 <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
@@ -201,8 +201,9 @@
     </div>
 </div>
 
-<CustomModal @bind-IsOpen="showModal" Title="Application Submitted">
-    <p>Thank you for your application. We will review your submission and contact you via email with the next steps.</p>
+<CustomModal @bind-IsOpen="showModal" Title="@modalTitle">
+    @* Shows the response message from a registration submission *@
+    @modalMessage
 </CustomModal>
 
 @code {
@@ -223,6 +224,14 @@
 
     private SpecialUseRegistration specialUseRegistration { get; set; } = new();
     private GeneralUseRegistration generalUseRegistration { get; set; } = new();    
+
+    private bool isSpecialUseRegistrationVisible = false;
+
+    private bool isGeneralUseRegistrationVisible = false;
+
+    private bool showModal = false;
+    private string modalMessage = string.Empty;
+    private string modalTitle = string.Empty;
 
     public bool isCommercialUseDecisionCardVisible {get;set;} = true;
     public bool isUseInReleasedDecisionCardVisible {get;set;} = false;
@@ -250,17 +259,9 @@
         isSpecialUseRegistrationVisible = !isSpecialUseRegistrationVisible;
     }
 
+    private async Task ToggleSpecial() => isSpecialUseRegistrationVisible = !isSpecialUseRegistrationVisible;
 
-    private async Task ToggleSpecial()
-    {   
-        isSpecialUseRegistrationVisible = !isSpecialUseRegistrationVisible;
-
-    }   
-
-    private async Task ToggleGeneral()
-    {
-        isGeneralUseRegistrationVisible = !isGeneralUseRegistrationVisible;
-    }
+    private async Task ToggleGeneral() => isGeneralUseRegistrationVisible = !isGeneralUseRegistrationVisible;
 
     private async Task ToggleUseInReleased()
     {
@@ -292,25 +293,60 @@
     }
 
 
+    /// <summary>
+    /// Submits a registration application to the web API and shows a modal 
+    /// with the response message. The response message will indicate if the 
+    /// registration was successful or if there were any errors. 
+    /// </summary>
+    /// <param name="registration"> The registration object containing the user's registration details.</param>
+    /// <returns></returns>
     private async Task SubmitApplication(IRegistration registration)
     {
         Logger.LogInformation($"Submitting application for {registration.ContactEmail}");
-        await WebApiUtility.CreateRegistrationAsync(specialUseRegistration);
-        OpenModal();
+        ResponseModel response = await WebApiUtility.CreateRegistrationAsync(registration);
+        string title = "";
+        string message = response.Message;
+        if (response.IsSuccess)
+        {
+            if (response.Registration is SpecialUseRegistration specialUseReg)
+            {
+                Logger.LogInformation($"Special Use registration successful for {registration.ContactEmail} with licence pathway {specialUseReg.LicencePathWay}");
+                message = $"A registration confirmation email has been sent to {registration.ContactEmail}.\n" +
+                    "A representative from the APSIM Initiative will be in touch to confirm your licence classification and next steps.\n";
+                title = "Registration Submitted For Review";
+            }
+            else 
+            {
+                Logger.LogInformation($"Registration successful for {registration.ContactEmail}");
+                message = "Registration successful!\n" +
+                    $"A registration confirmation email has been sent to {registration.ContactEmail}.\n" +
+                    "Please check your email for a verification link to complete the registration process and download your product.";
+                title = "Registration Submitted";
+            }
+
+        }
+        else if (response.Message.Contains("A registration with this email already exists."))   
+        {
+            Logger.LogWarning($"Registration attempt with existing email: {registration.ContactEmail}");
+            message = "A registration with this email already exists.\n" +
+                "If you have not received a confirmation email, please check your spam folder or contact support for assistance.\n" +
+                "Support Email: apsim@csiro.au";
+            title = "Are you already registered?";
+        }
+        OpenModal(message, title);
     }
 
-    private bool isSpecialUseRegistrationVisible = false;
 
-    private bool isGeneralUseRegistrationVisible = false;
 
-    private bool showModal = false;
 
-    private void OpenModal()
+    /// <summary>Opens the modal with a given message and title. </summary>
+    /// <param name="message">The message to display in the modal.</param>
+    /// <param name="title">The title of the modal.</param>
+    private void OpenModal(string message, string title)
     {
-        
         showModal = true;
+        modalMessage = message;
+        modalTitle = title;
     }
-
-
 
 }

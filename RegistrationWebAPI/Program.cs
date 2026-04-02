@@ -5,12 +5,14 @@ using RegistrationWebAPI.Services;
 using dotenv.net;
 using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using RegistrationWebAPI.Utilities;
 
 // Load environment variables from .env file
 DotEnv.Load();
@@ -34,6 +36,11 @@ var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOper
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is not configured.");
 var jwtExpiryMinutes = int.TryParse(builder.Configuration["Jwt:TokenExpiryMinutes"], out var expiryMinutes) ? expiryMinutes : 60;
 
+builder.Services.AddSingleton(options =>
+{
+    string apiKey = builder.Configuration["Smtp:ApiKey"] ?? throw new InvalidOperationException("SendGrid API key is not configured.");
+    return new MailUtility(apiKey);
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -42,8 +49,9 @@ builder.Services.AddSwaggerGen(options =>
 	{
 		Version = "v1",
 		Title = "APSIM Registration API",
-		Description = "API for managing registrations in the APSIM Registration System.",
-
+		Description = "API for managing registrations in the APSIM Registration System.\n" +
+		"To start use the Authentication endpoint with your credentials (from vault or .env) to retrieve a JWT token",
+		
 	});
 
 	options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -91,6 +99,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+	var db = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
+	db.Database.Migrate();
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -156,7 +170,9 @@ app.MapPost("/api/auth/token", (AuthTokenRequest request) =>
 	.WithName("CreateAuthToken")
 	.WithTags("Authentication")
 	.WithSummary("Create JWT token")
-	.WithDescription("Authenticates the caller with configured credentials and returns a JWT token.")
+	.WithDescription("Authenticates the caller with configured credentials and returns a JWT token.\n"+
+		"Change the username and password values below and use the token to authorize API requests above.\n" +
+		"When the authorize padlock is 'locked' all subsequent endpoint requests will be authenticated.")
 	.Produces<AuthTokenResponse>(StatusCodes.Status200OK)
 	.Produces(StatusCodes.Status401Unauthorized)
 	.ProducesProblem(StatusCodes.Status500InternalServerError);
@@ -167,6 +183,67 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithSummary("Get API Health")
     .WithDescription("Returns a simple status message indicating that the API is running.")
 	.Produces(StatusCodes.Status200OK);
+
+app.MapGet("/api/registrations/verify", async (string token, RegistrationDbContext db) =>
+{
+	if (string.IsNullOrWhiteSpace(token))
+	{
+		return Results.BadRequest("Verification token is required.");
+	}
+
+	var registration = await db.Registrations.FirstOrDefaultAsync(x => x.EmailVerificationToken == token);
+	if (registration is null)
+	{
+		return Results.NotFound();
+	}
+
+	if (registration.LicenceStatus != LicenceStatus.AwaitingEmailVerification)
+	{
+		return Results.BadRequest("Registration is not awaiting email verification.");
+	}
+
+	if (registration.EmailVerificationSentAtUtc is null)
+	{
+		return Results.BadRequest("Verification link metadata is missing.");
+	}
+
+	if (DateTime.UtcNow > registration.EmailVerificationSentAtUtc.Value.AddHours(24))
+	{
+		return Results.BadRequest("Verification link has expired.");
+	}
+
+	registration.LicenceStatus = registration.RegistrationType == RegistrationType.SpecialUse
+		? LicenceStatus.SpecialAwaitingReview
+		: LicenceStatus.GeneralUse;
+	registration.EmailVerificationToken = null;
+	registration.EmailVerificationSentAtUtc = null;
+
+	await db.SaveChangesAsync();
+
+	return Results.Ok(new RegistrationResponse
+	{
+		Id = registration.Id,
+		RegistrationType = registration.RegistrationType,
+		ContactName = registration.ContactName,
+		ContactEmail = registration.ContactEmail,
+		ApplicationDate = registration.ApplicationDate,
+		LicenceStatus = registration.LicenceStatus,
+		OrganisationName = registration.OrganisationName,
+		OrganisationAddress = registration.OrganisationAddress,
+		OrganisationWebsite = registration.OrganisationWebsite,
+		ContactPhone = registration.ContactPhone,
+		LicencePathway = registration.LicencePathway,
+		AnnualTurnover = registration.AnnualTurnover,
+	});
+})
+	.AllowAnonymous()
+	.WithName("VerifyRegistrationEmail")
+	.WithTags("Registrations")
+	.WithSummary("Verify registration email")
+	.WithDescription("Verifies an email token and updates licence status within 24 hours of email send time.")
+	.Produces<RegistrationResponse>(StatusCodes.Status200OK)
+	.Produces(StatusCodes.Status400BadRequest)
+	.Produces(StatusCodes.Status404NotFound);
 
 var registrations = app.MapGroup("/api/registrations")
 	.WithTags("Registrations")
@@ -226,7 +303,7 @@ registrations.MapGet("/{id:guid}", async (Guid id, RegistrationDbContext db) =>
 	.Produces(StatusCodes.Status404NotFound);
 
 // --- Add Registration Endpoint ---
-registrations.MapPost("/", async (RegistrationUpsertRequest request, RegistrationDbContext db, ILogger<Program> logger) =>
+registrations.MapPost("/", async (RegistrationUpsertRequest request, RegistrationDbContext db, ILogger<Program> logger, HttpContext httpContext) =>
 {
 	var errors = RegistrationValidation.Validate(request);
 	if (errors.Count > 0)
@@ -237,10 +314,24 @@ registrations.MapPost("/", async (RegistrationUpsertRequest request, Registratio
 	try
 	{
 		var entity = RegistrationMapping.ToNewEntity(request);
-		db.Registrations.Add(entity);
-		await db.SaveChangesAsync();
+		entity.EmailVerificationToken = Guid.NewGuid().ToString("N");
+		entity.EmailVerificationSentAtUtc = DateTime.UtcNow;
+
+		if (db.Registrations.Any(r => r.ContactEmail == entity.ContactEmail) is false)
+		{
+			db.Registrations.Add(entity);
+			await db.SaveChangesAsync();
+		}
+		else return Results.Conflict("A registration with the same details already exists. You may already be registered.");
 
 		var response = RegistrationMapping.ToResponse(entity);
+		var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+		var verificationLink = $"{baseUrl}/api/registrations/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}";
+
+		// Send confirmation email after successful registration creation with a verification link.
+		var mailUtility = app.Services.GetRequiredService<MailUtility>();
+		await mailUtility.SendVerificationEmailAsync(entity.ContactEmail, verificationLink);
+
 		return Results.Created($"/api/registrations/{entity.Id}", response);
 	}
 	catch (DbUpdateException ex) when (ex.InnerException is SqliteException sqliteEx)
@@ -341,6 +432,31 @@ registrations.MapDelete("/{id:guid}", async (Guid id, RegistrationDbContext db) 
 	.WithName("DeleteRegistration")
     .WithSummary("Delete Registration")
     .WithDescription("Deletes an existing registration by its unique identifier.")
+	.Produces(StatusCodes.Status204NoContent)
+	.Produces(StatusCodes.Status404NotFound);
+
+
+registrations.MapDelete("/", async ([FromBody] BulkDeleteRegistrationsRequest request, RegistrationDbContext db) =>
+{
+	if (request.Ids.Count == 0)
+	{
+		return Results.BadRequest("At least one registration id is required.");
+	}
+
+	var entities = await db.Registrations.Where(x => request.Ids.Contains(x.Id)).ToListAsync();
+	if (entities.Count == 0)
+	{
+		return Results.NotFound();
+	}
+
+	db.Registrations.RemoveRange(entities);
+	await db.SaveChangesAsync();
+	return Results.NoContent();
+})
+	.WithName("BulkDeleteRegistrations")
+	.WithSummary("Bulk Delete Registrations")
+	.WithDescription("Deletes multiple registrations by their unique identifiers. Accepts a list of registration ids in the request body and deletes all matching registrations.")
+	.Produces(StatusCodes.Status400BadRequest)
 	.Produces(StatusCodes.Status204NoContent)
 	.Produces(StatusCodes.Status404NotFound);
 

@@ -7,6 +7,7 @@ DotEnv.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<WebApiUtility>();
+builder.Services.AddHttpClient<APSIMBuildsAPIUtility>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

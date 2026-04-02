@@ -39,6 +39,6 @@ public class SpecialUseRegistration : IRegistration
     /// the special use registration. This is a required field and must 
     /// be true for the application to be valid.
     /// </summary>
-    [Required(ErrorMessage = "You must agree to the terms and conditions.")]
+    [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept licence terms to proceed.")]
     public bool AgreesToTerms { get; set; }
 }

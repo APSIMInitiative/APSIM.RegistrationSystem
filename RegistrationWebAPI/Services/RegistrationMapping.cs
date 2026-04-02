@@ -77,8 +77,6 @@ public static class RegistrationMapping
 
     private static LicenceStatus DefaultStatusFor(RegistrationType registrationType)
     {
-        return registrationType == RegistrationType.SpecialUse
-            ? LicenceStatus.SpecialAwaitingReview
-            : LicenceStatus.GeneralUse;
+        return LicenceStatus.AwaitingEmailVerification;
     }
 }
