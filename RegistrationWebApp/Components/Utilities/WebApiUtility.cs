@@ -8,8 +8,13 @@ using RegistrationWebApp.Components.Classes;
 
 namespace RegistrationWebApp.Components.Utilities;
 
-public class WebApiUtility
+public partial class WebApiUtility
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly HttpClient _client;
     private readonly string _baseUrl;
     private readonly string? _configuredUsername;
@@ -173,6 +178,8 @@ public class WebApiUtility
     /// get the list of registrations. The response is deserialized into a list 
     /// of IRegistration objects and returned to the caller.
     /// </summary>
+    /// <remarks> Will never return null. If there are no registrations, 
+    /// an empty list will be returned.</remarks>
     /// <returns>A list of IRegistration objects representing the 
     /// registrations retrieved from the web API.</returns>
     public async Task<List<IRegistration>> GetRegistrationsAsync()
@@ -182,10 +189,41 @@ public class WebApiUtility
         HttpResponseMessage response = await _client.GetAsync(RegistrationEndpoint);
         response.EnsureSuccessStatusCode();
         string content = await response.Content.ReadAsStringAsync();
-        return JsonSerializer
-            .Deserialize<List<IRegistration>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })?
-            .Cast<IRegistration>()
-            .ToList() ?? new List<IRegistration>();
+        var apiRegistrations = JsonSerializer.Deserialize<List<RegistrationApiModel>>(content, JsonOptions) ?? new List<RegistrationApiModel>();
+
+        return apiRegistrations
+            .Select(MapApiRegistration)
+            .ToList();
+    }
+
+    private static IRegistration MapApiRegistration(RegistrationApiModel registration)
+    {
+        if (registration.IsSpecialUse())
+        {
+            return new SpecialUseRegistration
+            {
+                ContactName = registration.ContactName,
+                ContactEmail = registration.ContactEmail,
+                ApplicationDate = registration.ApplicationDate,
+                LicenceStatus = registration.LicenceStatus,
+                OrganisationName = registration.OrganisationName,
+                OrganisationAddress = registration.OrganisationAddress,
+                OrganisationWebsite = registration.OrganisationWebsite,
+                ContactPhone = registration.ContactPhone,
+                LicencePathWay = registration.LicencePathway ?? default,
+                AnnualTurnover = registration.AnnualTurnover ?? default,
+                AgreesToTerms = registration.AgreesToTerms ?? false,
+            };
+        }
+
+        return new GeneralUseRegistration
+        {
+            ContactName = registration.ContactName,
+            ContactEmail = registration.ContactEmail,
+            ApplicationDate = registration.ApplicationDate,
+            LicenceStatus = registration.LicenceStatus,
+            AgreesToTerms = registration.AgreesToTerms ?? false,
+        };
     }
 
     public async Task<ResponseModel> CreateRegistrationAsync(IRegistration registration)
@@ -251,7 +289,7 @@ public class WebApiUtility
         HttpResponseMessage response = await _client.GetAsync(endpoint);
         response.EnsureSuccessStatusCode();
         string content = await response.Content.ReadAsStringAsync();
-        var registrationsJson = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var registrationsJson = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(content, JsonOptions);
         return registrationsJson?.FirstOrDefault(r => r["contactEmail"].GetString() == email) != null;
     }
 }
