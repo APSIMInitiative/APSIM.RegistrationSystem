@@ -31,6 +31,18 @@
     public RenderFragment ChildContent { get; set; } = default!;
 
     [Parameter]
+    ///<summary>
+    /// This property is used to control the visibility of the modal. 
+    /// When set to true, the modal will be displayed; when set to false, 
+    /// it will be hidden.
+    ///</summary>
+    /// <remarks>
+    /// The IsOpen property is typically bound to a boolean variable in the 
+    /// parent component that manages the state of the modal. 
+    /// By using two-way binding (e.g., @bind-IsOpen), 
+    /// the parent component can easily control when the modal is shown or 
+    /// hidden based on user interactions or other events.
+    /// </remarks>
     public bool IsOpen { get; set; }
 
     [Parameter]
