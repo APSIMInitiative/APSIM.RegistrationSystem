@@ -11,7 +11,11 @@
         <p class="card-description">@Product.Description</p>
     </div>
     <div class="card-footer text-center">
-        <NavLink href="@Product.Href" class="btn btn-success">Register and Download</NavLink>
+        <NavLink href="@Product.Href" class="btn btn-success">@Product.FirstButtonText</NavLink>
+        @if (!string.IsNullOrEmpty(Product.SecondHref) && !string.IsNullOrEmpty(Product.SecondButtonText))
+        {
+            <NavLink href="@Product.SecondHref" class="btn btn-primary m-2">@Product.SecondButtonText</NavLink>
+        }
     </div>
 </div>
 
