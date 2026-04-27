@@ -1,0 +1,100 @@
+
+
+@namespace RegistrationWebApp.Components.Pages
+@page "/existing-user/{Product}"
+@using RegistrationShared.Interfaces
+@using RegistrationWebApp.Components.Layout.CustomLayout
+@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+@using RegistrationWebApp.Components.Utilities
+@using RegistrationWebApp.Components.Utilities.Models
+@using System.ComponentModel.DataAnnotations
+@inject ILogger<ExistingUser> Logger
+@inject WebApiUtility WebApiUtility
+
+@rendermode InteractiveServer
+
+
+<PageTitle>Existing Users</PageTitle>
+
+<Row>
+    <Col CustomColClasses="col-12 col-md-8 offset-md-2">
+        <h2 class="text-center">Existing Users</h2>
+        <p class="text-center">If you have already registered and just want to download the product, you can do so here.</p>
+        <div class="alert alert-info" role="alert">
+        If your registration status is confirmed, we will provide a download link in an email sent to the provided email address.
+        </div>
+        <EditForm Model="@formdata" OnValidSubmit="() => OnCheckRegistration(formdata.emailInput)" class="text-center m-4 ">
+            <div class="mb-3">
+                <label for="emailInput" class="form-label">Email address</label>
+                <input type="email" class="form-control" id="emailInput" placeholder="Enter your email" @bind-value="formdata.emailInput" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Check registration status</button>
+        </EditForm>
+    </Col>
+</Row>
+
+<CustomModal Title="@modalTitle" @bind-IsOpen="showModal">
+    <p>@modalMessage</p>
+</CustomModal>
+
+@code
+{
+    [Parameter]
+    public required string Product { get; init; }
+    private bool showModal = false;
+    private string modalMessage = string.Empty;
+    private string modalTitle = string.Empty;
+    private FormData formdata = new FormData();
+
+    /// <summary>
+    /// This class represents the form data for the email input in 
+    /// the existing user registration check.
+    /// </summary>
+    private class FormData
+    {
+        [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+        public string emailInput { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// This property holds the message to be displayed in the modal after 
+    /// checking the user's registration status. 
+    /// It is updated based on the result of the registration check and is 
+    /// used to provide feedback to the user about whether their registration was found or not.
+    /// </summary>
+    private string ModalMessage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Sends request to check the user's registration status and displays the result in the modal.
+    /// </summary>
+    private async Task OnCheckRegistration(string emailInput)
+    {
+        bool registrationStatusFound = false;
+        Logger.LogInformation("Checking registration status for product: {Product}", Product);
+        List<IRegistration> registrations = await WebApiUtility.GetRegistrationsAsync();
+        foreach (var registration in registrations.Where(
+            r => (int)r.LicenceStatus >= 2 && 
+            (int)r.LicenceStatus < 8))
+        {
+
+            if (registration.ContactEmail == emailInput)
+            {
+                Logger.LogInformation("Registration found for email: {Email}", emailInput);
+                registrationStatusFound = true;
+            }
+        }
+        if (!registrationStatusFound)
+        {
+            Logger.LogInformation("No registration found for email: {Email}", emailInput);
+        }
+        OpenModal("Registration Status", registrationStatusFound ? "Registration found." : "No registration found.");
+    }
+
+    private void OpenModal(string title, string message)
+    {
+        modalTitle = title;
+        modalMessage = message;
+        showModal = true;
+    }
+
+}
