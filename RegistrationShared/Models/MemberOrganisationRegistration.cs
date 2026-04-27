@@ -4,7 +4,7 @@ using RegistrationShared.Interfaces;
 
 namespace RegistrationShared.Models;
 
-public class GeneralUseRegistration : IRegistration
+public class MemberOrganisationRegistration : IRegistration
 {
     public int Id { get; set; }
 
@@ -15,7 +15,7 @@ public class GeneralUseRegistration : IRegistration
     [Required(ErrorMessage = "Please enter the contact person's name.")]
     public string? ContactName { get; set; }
 
-    public LicenceStatus LicenceStatus { get; set; } = LicenceStatus.AwaitingEmailVerification;
+    public LicenceStatus LicenceStatus { get; set; } = LicenceStatus.GeneralUse;
 
     public DateTime ApplicationDate { get; set; } = DateTime.UtcNow;
 
@@ -25,4 +25,9 @@ public class GeneralUseRegistration : IRegistration
     /// </summary>
     [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept licence terms to proceed.")]
     public bool AgreesToTerms { get; set; }
+
+    public int MemberOrganisationId { get; set; }
+    public MemberOrganisation MemberOrganisation { get; set; } = null!;
+
+
 }

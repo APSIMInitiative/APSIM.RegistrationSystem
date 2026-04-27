@@ -4,8 +4,16 @@ using RegistrationShared.Interfaces;
 
 namespace RegistrationShared.Models;
 
+/// <summary>
+/// Represents a company registration for a special use licence.
+/// Organisations can add further affiliated registrations to the same 
+/// company to handle staff members who require access to the software 
+/// under the same licence.
+/// </summary>
 public class SpecialUseRegistration : IRegistration
 {
+    public int Id { get; set; }
+
     [Required(ErrorMessage = "Please enter the organisation's name.")]
     public string? OrganisationName { get; set; }
 
@@ -41,4 +49,6 @@ public class SpecialUseRegistration : IRegistration
     /// </summary>
     [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept licence terms to proceed.")]
     public bool AgreesToTerms { get; set; }
+
+    public List<SpecialUseStaffRegistration> SpecialUseStaffRegistrations { get; set; } = new List<SpecialUseStaffRegistration>();
 }
