@@ -4,4 +4,6 @@ public enum RegistrationType
 {
     GeneralUse,
     SpecialUse,
+    MemberOrganisation,
+    SpecialUseStaff,
 }
