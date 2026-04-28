@@ -124,9 +124,9 @@
                         <ValidationMessage For="@(() => specialUseRegistration.ContactEmail)" />
                         <InputText class="form-control mb-2" Placeholder="*Contact Name" @bind-Value="specialUseRegistration!.ContactName" />
                         <ValidationMessage For="@(() => specialUseRegistration.ContactName)" />
-                        <InputText class="form-control mb-2" Placeholder="Organisation Name" @bind-Value="specialUseRegistration!.OrganisationName" />
+                        <InputText class="form-control mb-2" Placeholder="*Organisation Name" @bind-Value="specialUseRegistration!.OrganisationName" />
                         <ValidationMessage For="@(() => specialUseRegistration.OrganisationName)" />
-                        <InputText class="form-control mb-2" Placeholder="Organisation Address" @bind-Value="specialUseRegistration!.OrganisationAddress" />
+                        <InputText class="form-control mb-2" Placeholder="*Organisation Address" @bind-Value="specialUseRegistration!.OrganisationAddress" />
                         <ValidationMessage For="@(() => specialUseRegistration.OrganisationAddress)" />
                         <InputText class="form-control mb-2" Placeholder="Organisation Website" @bind-Value="specialUseRegistration!.OrganisationWebsite" />
                         <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="specialUseRegistration!.ContactPhone" />
@@ -151,7 +151,7 @@
                             <option value="" selected disabled>*-- Select Annual Turnover Range --</option>
                         </InputSelect >
                         <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="specialUseRegistration!.LicenceStatus">
-                            <option value="@LicenceStatus.SpecialAwaitingReview" selected disabled>@LicenceStatus.SpecialAwaitingReview.GetDescription()</option>
+                            <option value="@LicenceStatus.AwaitingEmailVerification" selected disabled>@LicenceStatus.AwaitingEmailVerification.GetDescription()</option>
                         </InputSelect >
                         <label class="form-check-label mb-2">I have read and agree to the Special Use licence terms. 
                             Please note that final licence classification is confirmed by the APSIM Initiative.
@@ -302,38 +302,47 @@
     /// <returns></returns>
     private async Task SubmitApplication(IRegistration registration)
     {
-        Logger.LogInformation($"Submitting application for {registration.ContactEmail}");
-        ResponseModel response = await WebApiUtility.CreateRegistrationAsync(registration);
-        string title = "";
-        string message = response.Message;
-        if (response.IsSuccess)
+        try
         {
-            if (response.Registration is SpecialUseRegistration specialUseReg)
+            Logger.LogInformation($"Submitting application for {registration.ContactEmail}");
+            ResponseModel response = await WebApiUtility.CreateRegistrationAsync(registration);
+            string title = "";
+            string message = response.Message;
+            if (response.IsSuccess)
             {
-                Logger.LogInformation($"Special Use registration successful for {registration.ContactEmail} with licence pathway {specialUseReg.LicencePathWay}");
-                message = $"A registration confirmation email has been sent to {registration.ContactEmail}.\n" +
-                    "A representative from the APSIM Initiative will be in touch to confirm your licence classification and next steps.\n";
-                title = "Registration Submitted For Review";
-            }
-            else 
-            {
-                Logger.LogInformation($"Registration successful for {registration.ContactEmail}");
-                message = "Registration successful!\n" +
-                    $"A registration confirmation email has been sent to {registration.ContactEmail}.\n" +
-                    "Please check your email for a verification link to complete the registration process and download your product.";
-                title = "Registration Submitted";
-            }
+                if (response.Registration is SpecialUseRegistration specialUseReg)
+                {
+                    Logger.LogInformation($"Special Use registration successful for {registration.ContactEmail} with licence pathway {specialUseReg.LicencePathWay}");
+                    message = $"A registration confirmation email has been sent to {registration.ContactEmail}.\n" +
+                        "A representative from the APSIM Initiative will be in touch to confirm your licence classification and next steps.\n";
+                    title = "Registration Submitted For Review";
+                    specialUseRegistration = new SpecialUseRegistration(); // Clear the form
+                }
+                else 
+                {
+                    Logger.LogInformation($"Registration successful for {registration.ContactEmail}");
+                    message = "Registration successful!\n" +
+                        $"A registration confirmation email has been sent to {registration.ContactEmail}.\n" +
+                        "Please check your email for a verification link to complete the registration process and download your product.";
+                    title = "Registration Submitted";
+                }
 
+            }
+            else if (response.Message.Contains("A registration with this email already exists."))   
+            {
+                Logger.LogWarning($"Registration attempt with existing email: {registration.ContactEmail}");
+                message = "A registration with this email already exists.\n" +
+                    "If you have not received a confirmation email, please check your spam folder or contact support for assistance.\n" +
+                    "Support Email: apsim@csiro.au";
+                title = "Are you already registered?";
+            }
+            OpenModal(message, title);
         }
-        else if (response.Message.Contains("A registration with this email already exists."))   
+        catch (Exception ex)
         {
-            Logger.LogWarning($"Registration attempt with existing email: {registration.ContactEmail}");
-            message = "A registration with this email already exists.\n" +
-                "If you have not received a confirmation email, please check your spam folder or contact support for assistance.\n" +
-                "Support Email: apsim@csiro.au";
-            title = "Are you already registered?";
+            Logger.LogError(ex, $"An error occurred while submitting registration for {registration.ContactEmail}");
+            OpenModal("An error occurred while submitting your registration. Please try again later or submit an issue on our GitHub page: https://github.com/APSIMInitiative/APSIM.RegistrationSystem/issues", "Error Submitting Registration");
         }
-        OpenModal(message, title);
     }
 
 
