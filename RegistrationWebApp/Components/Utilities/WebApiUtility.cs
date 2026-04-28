@@ -24,6 +24,7 @@ public partial class WebApiUtility
 
     private const string AuthTokenEndpoint = "api/auth/token";
     private const string RegistrationEndpoint = "api/registrations";
+    private const string MemberOrganisationsEndpoint = "api/member-organisations";
 
     /// <summary>The name of the environment variable that can be used to 
     /// override the web API base URL configured in appsettings.json.</summary>
@@ -259,20 +260,68 @@ public partial class WebApiUtility
     /// <exception cref="InvalidOperationException">Thrown when the registration type is invalid.</exception>
     private static string GetRegistrationBody(IRegistration registration)
     {
-        string body = string.Empty;
-        if (registration.LicenceStatus == RegistrationShared.Enums.LicenceStatus.AwaitingEmailVerification)
+        object requestModel;
+
+        if (registration is SpecialUseRegistration specialUseReg)
         {
-            body = JsonSerializer.Serialize(registration as GeneralUseRegistration);
+            requestModel = new
+            {
+                registrationType = 1,  // RegistrationType.SpecialUse = 1
+                contactName = specialUseReg.ContactName,
+                contactEmail = specialUseReg.ContactEmail,
+                applicationDate = specialUseReg.ApplicationDate,
+                licenceStatus = specialUseReg.LicenceStatus,
+                organisationName = specialUseReg.OrganisationName,
+                organisationAddress = specialUseReg.OrganisationAddress,
+                organisationWebsite = specialUseReg.OrganisationWebsite,
+                contactPhone = specialUseReg.ContactPhone,
+                licencePathway = specialUseReg.LicencePathWay,
+                annualTurnover = specialUseReg.AnnualTurnover,
+                agreesToTerms = true,
+            };
         }
-        else if (registration.LicenceStatus == RegistrationShared.Enums.LicenceStatus.SpecialAwaitingReview)
+        else if (registration is GeneralUseRegistration generalUseReg)
         {
-            body = JsonSerializer.Serialize(registration as SpecialUseRegistration);
+            requestModel = new
+            {
+                registrationType = 0,  // RegistrationType.GeneralUse = 0
+                contactName = generalUseReg.ContactName,
+                contactEmail = generalUseReg.ContactEmail,
+                applicationDate = generalUseReg.ApplicationDate,
+                licenceStatus = generalUseReg.LicenceStatus,
+                agreesToTerms = true,
+            };
+        }
+        else if (registration is MemberOrganisationRegistration memberOrgReg)
+        {
+            requestModel = new
+            {
+                registrationType = 2,  // RegistrationType.MemberOrganisation = 2
+                contactName = memberOrgReg.ContactName,
+                contactEmail = memberOrgReg.ContactEmail,
+                applicationDate = memberOrgReg.ApplicationDate,
+                licenceStatus = memberOrgReg.LicenceStatus,
+                agreesToTerms = memberOrgReg.AgreesToTerms,
+            };
+        }
+        else if (registration is SpecialUseStaffRegistration specialUseStaffReg)
+        {
+            requestModel = new
+            {
+                registrationType = 3,  // RegistrationType.SpecialUseStaff = 3
+                contactName = specialUseStaffReg.ContactName,
+                contactEmail = specialUseStaffReg.ContactEmail,
+                applicationDate = specialUseStaffReg.ApplicationDate,
+                licenceStatus = specialUseStaffReg.LicenceStatus,
+                agreesToTerms = specialUseStaffReg.AgreesToTerms,
+            };
         }
         else
         {
             throw new InvalidOperationException("Invalid registration type.");
         }
-        return body;
+
+        return JsonSerializer.Serialize(requestModel);
     }
 
     /// <summary>
@@ -291,5 +340,40 @@ public partial class WebApiUtility
         string content = await response.Content.ReadAsStringAsync();
         var registrationsJson = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(content, JsonOptions);
         return registrationsJson?.FirstOrDefault(r => r["contactEmail"].GetString() == email) != null;
+    }
+
+    /// <summary>
+    /// Adds a new member organisation by sending a POST request to the 
+    /// member organisations endpoint of the web API with the member 
+    /// organisation data serialized in the request body.
+    /// </summary>
+    /// <param name="memberOrganisation">The member organisation object to be added.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the HTTP response message.</returns>
+    public async Task<HttpResponseMessage> AddMemberOrganisationAsync(MemberOrganisation memberOrganisation)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        string body = JsonSerializer.Serialize(memberOrganisation);
+        string endpoint = GetEndpointUrl(MemberOrganisationsEndpoint);
+        HttpResponseMessage response = await _client.PostAsync(endpoint,
+            new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+        return response;
+    }
+
+    /// <summary>
+    /// Retrieves a list of member organisations from the web API.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation. 
+    /// The task result contains a list of MemberOrganisation objects.</returns>
+    public async Task<List<MemberOrganisation>> GetMemberOrganisationsAsync()
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        string endpoint = GetEndpointUrl(MemberOrganisationsEndpoint);
+        HttpResponseMessage response = await _client.GetAsync(endpoint);
+        response.EnsureSuccessStatusCode();
+        string content = await response.Content.ReadAsStringAsync();
+        var memberOrganisations = JsonSerializer.Deserialize<List<MemberOrganisation>>(content, JsonOptions) ?? new List<MemberOrganisation>();
+        return memberOrganisations;
     }
 }

@@ -4,95 +4,186 @@
 @using RegistrationWebApp.Components.Classes.Utilities
 @using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
 @using RegistrationWebApp.Components.Layout.CustomLayout
+@using RegistrationWebApp.Components.Utilities
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/admin/"
 @rendermode InteractiveServer
+@inject WebApiUtility WebApiUtility
+@inject ILogger<Admin> Logger
 
-<Row>
-    <h1>Manage</h1>
-    <p>This is the admin page. Here you can manage your products and licenses.</p>
+<PageTitle>Registration Admin</PageTitle>
+<h2 class="text-center">Registration Admin</h2>
+<p class="text-center">This is the admin page. Here you can manage your products and licenses.</p>
+<Row CustomRowClasses="licence-row mt-4 border text-center">
+    <Col CustomColClasses="col-12 col-md-12">
+        <h2 class="text-center">Licenses</h2>
+        <p class="text-center">Here you can manage licences through their lifecycle</p>
 
-    <Row CustomRowClasses="licence-row mt-4">
-        <Col CustomColClasses="col-12 col-md-12">
-            <h2>Licenses</h2>
-            <p>Here you can manage licences through their lifecycle</p>
-
-            <Row CustomRowClasses="row-md-12 p-3">
-                <Col CustomColClasses="col-12 col-md-5 m-3 ">
-                    <h3>Recent General Use Registrations</h3>
-                    @foreach (var registration in registrations)
-                    { 
-                        <Card CardClasses="mt-3 mb-3" TitleText="General Use Registration" >
-                            <p><strong>Contact Name:</strong> @registration.ContactName</p>
-                            <p><strong>Contact Email:</strong> @registration.ContactEmail</p>
-                        </Card>
-                    }
-                </Col>
-                <Col CustomColClasses="col-12 col-md-5 m-3 ">
-                    <h3>Special Use Registrations</h3>
-                    @foreach (var registration in registrations)
-                    {
-                        @if (registration is SpecialUseRegistration)
+        <Row CustomRowClasses="row-md-12 p-3">
+            <Col CustomColClasses="col-12 col-md-5 m-3 ">
+                <h3>Recent General Use Registrations</h3>
+                <table class="table table-sm table-striped table-bordered table-hover">
+                    <thead class="table-success">
+                        <tr>
+                            <th>Contact Name</th>
+                            <th>Contact Email</th>
+                            <th>Licence Status</th>
+                            <th>Registration Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (GeneralUseRegistration registration in registrations.Where(r => r is GeneralUseRegistration))
                         {
-
-                            <Card CardClasses="mt-3 mb-3" TitleText="Special Use Registration"  >
-                                <p><strong>Contact Name:</strong> @registration.ContactName</p>
-                                <p><strong>Contact Email:</strong> @registration.ContactEmail</p>
-                                <p><strong>Organisation Name:</strong> @( (registration as SpecialUseRegistration)?.OrganisationName )</p>
-                                <p><strong>Organisation Address:</strong> @( (registration as SpecialUseRegistration)?.OrganisationAddress )</p>
-                                <p><strong>Licence Pathway:</strong> @( (registration as SpecialUseRegistration)?.LicencePathWay.GetDescription() )</p>
-                                <p><strong>Annual Turnover:</strong> @( (registration as SpecialUseRegistration)?.AnnualTurnover.GetDescription() )</p>
-                                <p><strong>Application Date:</strong> @( (registration as SpecialUseRegistration)?.ApplicationDate.ToShortDateString() )</p>
-                            </Card>
-
+                            <tr>
+                                <td>@registration.ContactName</td>
+                                <td>@registration.ContactEmail</td>
+                                <td>@registration.LicenceStatus.GetDescription()</td>
+                                <td>@registration.ApplicationDate.ToShortDateString()</td>
+                            </tr>
                         }
-                    }
-                </Col>
-            </Row>
-
-
-        </Col>
-    </Row>
-
-    <Row CustomRowClasses="registration-stats-row mt-4">
-        <Col CustomColClasses="col-12 col-md-6">
-            <h2>Products</h2>
-            <p>Here you can manage products and their associated licences</p>
-        </Col>
-    </Row>
-
-
+                    </tbody>
+                </table>
+            </Col>
+            <Col CustomColClasses="col-12 col-md-5 m-3 ">
+                <h3>Special Use Registrations</h3>
+                <table class="table table-sm table-striped table-bordered table-hover">
+                    <thead class="table-success">
+                        <tr>
+                            <th>Contact Name</th>
+                            <th>Contact Email</th>
+                            <th>Organisation Name</th>
+                            <th>Organisation Address</th>
+                            <th>Licence Pathway</th>
+                            <th>Annual Turnover</th>
+                            <th>Application Date</th>
+                            <th>Registered Members</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (SpecialUseRegistration registration in registrations.Where(r => r is SpecialUseRegistration))
+                        {
+                            <tr>
+                                <td>@registration.ContactName</td>
+                                <td>@registration.ContactEmail</td>
+                                <td>@registration.OrganisationName</td>
+                                <td>@registration.OrganisationAddress</td>
+                                <td>@registration.LicencePathWay.GetDescription()</td>
+                                <td>@registration.AnnualTurnover.GetDescription()</td>
+                                <td>@registration.ApplicationDate.ToShortDateString()</td>
+                                <td>@registration.SpecialUseStaffRegistrations.Count()</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </Col>
+        </Row>
+    </Col>
 </Row>
 
+<Row CustomRowClasses="mt-4 border text-center">
+    <Col CustomColClasses="col-12 col-lg-12 col-md-6">
+        <h2>Member Organisations</h2>
+        <p>Here you can manage member organisations and their associated members</p>
+        <Row>
+            <Col>
+                <h3>Add New Member Organisation</h3>
+                <EditForm Model="MemberOrganisation" OnValidSubmit="HandleNewMemberOrganisationSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                        <label for="organisationName" class="form-label">Organisation Name</label>
+                        <InputText id="organisationName" class="form-control" @bind-Value="MemberOrganisation.OrganisationName" placeholder="Enter organisation name e.g. CSIRO" />
+                        <label for="organisationDomain" class="form-label>">Organisation Domain</label>
+                        <InputText id="organisationDomain" class="form-control" @bind-Value="MemberOrganisation.OrganisationDomain" placeholder="example: csiro.au or iastate.edu this is the last part of a members email" />
+                        <button type="submit" class="btn btn-primary mt-3">Add Member Organisation</button>
+                </EditForm>
+            </Col>
+            <Col>
+                <h3>Existing Member Organisations</h3>
+                <table class="table table-sm table-striped table-bordered table-hover">
+                    <thead class="table-success">
+                        <tr>
+                            <th>Organisation Name</th>
+                            <th>Organisation Domain</th>
+                            <th>Membership Establishment Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var memberOrg in memberOrganisations)
+                        {
+                            <tr>
+                                <td>@memberOrg.OrganisationName</td>
+                                <td>@memberOrg.OrganisationDomain</td>
+                                <td>@memberOrg.MembershipEstablishmentDate.ToShortDateString()</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </Col>
+        </Row>
+    </Col>
+</Row>
+
+<CustomModal @bind-IsOpen="isModalOpen" Title="@modalTitle">
+    @modalMessage
+</CustomModal>
 
 @code{
 
-    List<IRegistration> registrations = new List<IRegistration>(){
-        new GeneralUseRegistration() { 
-            ContactName = "Dr Joe Nothing", 
-            ContactEmail = "joe@nothing.com", 
-        },
-        new GeneralUseRegistration() 
-        { 
-            ContactName = "Dr Jane Smith", 
-            ContactEmail = "jane@smith.com", 
-        },
-        new GeneralUseRegistration() 
-        { 
-            ContactName = "Dr Bob Johnson", 
-            ContactEmail = "bob@johnson.com", 
-        },
-        new SpecialUseRegistration() 
-        { 
-            ContactName = "Dr Alice Brown", 
-            ContactEmail = "alice@brown.com", 
-            OrganisationAddress = "123 Main St, Anytown, USA",
-            OrganisationName = "Alice's Research Lab",
-            LicencePathWay = LicencePathway.TypeOne,
-            AnnualTurnover = AnnualTurnover.BelowTwoMillion,
-            ApplicationDate = DateTime.Now.AddDays(-10),
+    private bool isModalOpen = false;
+    private string modalTitle = string.Empty;
+    private string modalMessage = string.Empty;
+    private MemberOrganisation MemberOrganisation { get; set; } = new MemberOrganisation();
+    private List<IRegistration> registrations = new List<IRegistration>();
+    private List<MemberOrganisation> memberOrganisations = new List<MemberOrganisation>();
+
+    private async Task HandleNewMemberOrganisationSubmit()
+    {
+        Logger.LogInformation($"New Member Organisation Submitted: {MemberOrganisation.OrganisationName}");
+        HttpResponseMessage response = await WebApiUtility.AddMemberOrganisationAsync(MemberOrganisation);
+        if (response.IsSuccessStatusCode)
+        {
+            Logger.LogInformation("Member organisation added successfully.");
+            MemberOrganisation = new MemberOrganisation(); // Clear the form
+            ShowModal("Success", "Member organisation added successfully.");
         }
-    };
+        else
+        {
+            Logger.LogError($"Failed to add member organisation. Status Code: {response.StatusCode}");
+            ShowModal("Error", $"Failed to add member organisation {MemberOrganisation.OrganisationName}. Status Code: {response.StatusCode}");
+        }
+    }
+
+    // This method is called when the component is initialized. 
+    // It retrieves data required for the admin page, such as the list of 
+    // registrations and member organisations, and handles any errors 
+    // that may occur during data retrieval.
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Logger.LogInformation("Admin page initialized. Fetching registrations and member organisations.");
+            registrations = await WebApiUtility.GetRegistrationsAsync();
+            memberOrganisations = await WebApiUtility.GetMemberOrganisationsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "An error occurred while fetching data for the admin page.");
+            ShowModal("Error", "An error occurred while fetching data. Please try again later.");
+        }
+    }
+
+    /// <summary>
+    /// Displays a modal dialog with the specified title and message. This method sets the modal's title and message,
+    /// and opens the modal.
+    /// </summary>
+    /// <param name="title">The title of the modal dialog.</param>
+    /// <param name="message">The message to be displayed in the modal dialog.</param>
+    private void ShowModal(string title, string message)
+    {
+        modalTitle = title;
+        modalMessage = message;
+        isModalOpen = true;
+    }
 
 }

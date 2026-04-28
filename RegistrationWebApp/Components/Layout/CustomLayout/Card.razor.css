@@ -1,11 +1,11 @@
 .custom-card {
-   border: 2px solid green;
+   border: 2px solid darkgrey;
    border-radius: 10px;
 
 }
 
 .card-header {
-   background-color: green;
+   background-color: darkgreen;
    padding: 10px;
    font-weight: bold;
 }
