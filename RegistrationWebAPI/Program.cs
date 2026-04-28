@@ -13,6 +13,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using RegistrationWebAPI.Utilities;
+using Microsoft.OpenApi.Extensions;
 
 // Load environment variables from .env file
 DotEnv.Load();
@@ -199,7 +200,8 @@ app.MapGet("/api/registrations/verify", async (string token, RegistrationDbConte
 
 	if (registration.LicenceStatus != LicenceStatus.AwaitingEmailVerification)
 	{
-		return Results.BadRequest("Registration is not awaiting email verification.");
+		string message = $"Registration is not awaiting email verification. Current status: {registration.LicenceStatus.GetDisplayName()}";
+		return Results.BadRequest(message);
 	}
 
 	if (registration.EmailVerificationSentAtUtc is null)
@@ -457,6 +459,105 @@ registrations.MapDelete("/", async ([FromBody] BulkDeleteRegistrationsRequest re
 	.WithSummary("Bulk Delete Registrations")
 	.WithDescription("Deletes multiple registrations by their unique identifiers. Accepts a list of registration ids in the request body and deletes all matching registrations.")
 	.Produces(StatusCodes.Status400BadRequest)
+	.Produces(StatusCodes.Status204NoContent)
+	.Produces(StatusCodes.Status404NotFound);
+
+// --- Member Organisations Endpoints ---
+// These endpoints allow management of member organisations, which allow staff
+// to register on behalf of member organisations, and provide a way to group 
+// registrations by organisation in the admin UI.
+
+var memberOrganisations = app.MapGroup("/api/member-organisations")
+	.WithTags("Member Organisations")
+    .RequireAuthorization();
+
+memberOrganisations.MapGet("/", async (RegistrationDbContext db) =>
+{
+	var entities = await db.MemberOrganisations
+		.AsNoTracking()
+		.OrderBy(x => x.OrganisationName)
+		.ToListAsync();
+
+	var data = entities.Select(MemberOrganisationMapping.ToResponse).ToList();
+
+	return Results.Ok(data);
+})
+	.WithName("ListMemberOrganisations")
+	.WithSummary("List Member Organisations")
+	.WithDescription("Returns all member organisations.")
+	.Produces<List<MemberOrganisationResponse>>(StatusCodes.Status200OK);
+
+memberOrganisations.MapGet("/{id:guid}", async (Guid id, RegistrationDbContext db) =>
+{
+	var entity = await db.MemberOrganisations
+		.AsNoTracking()
+		.FirstOrDefaultAsync(x => x.Id == id);
+
+	if (entity is null)
+	{
+		return Results.NotFound();
+	}
+
+	return Results.Ok(MemberOrganisationMapping.ToResponse(entity));
+})
+	.WithName("GetMemberOrganisationById")
+	.WithSummary("Get Member Organisation By Id")
+	.WithDescription("Returns a member organisation by its unique identifier.")
+	.Produces<MemberOrganisationResponse>(StatusCodes.Status200OK)
+	.Produces(StatusCodes.Status404NotFound);
+
+
+memberOrganisations.MapPost("/", async (MemberOrganisationUpsertRequest request, RegistrationDbContext db) =>
+{
+	var entity = MemberOrganisationMapping.ToNewEntity(request);
+	if (db.MemberOrganisations.Any(mo => mo.OrganisationDomain == entity.OrganisationDomain))
+		return Results.Conflict("A member organisation with the same domain already exists.");
+	db.MemberOrganisations.Add(entity);
+	await db.SaveChangesAsync();
+	return Results.Created($"/api/member-organisations/{entity.Id}", MemberOrganisationMapping.ToResponse(entity));
+})
+	.WithName("CreateMemberOrganisation")
+	.WithSummary("Create Member Organisation")
+	.WithDescription("Creates a new member organisation.")
+	.Produces<MemberOrganisationResponse>(StatusCodes.Status201Created)
+	.ProducesValidationProblem()
+	.Produces(StatusCodes.Status409Conflict);
+
+memberOrganisations.MapPut("/{id:guid}", async (Guid id, MemberOrganisationUpsertRequest request, RegistrationDbContext db) =>
+{
+	var entity = await db.MemberOrganisations.FirstOrDefaultAsync(x => x.Id == id);
+	if (entity is null)
+	{
+		return Results.NotFound();
+	}
+
+	MemberOrganisationMapping.ApplyUpdate(entity, request);
+	await db.SaveChangesAsync();
+
+	return Results.Ok(MemberOrganisationMapping.ToResponse(entity));
+})
+	.WithName("UpdateMemberOrganisation")
+	.WithSummary("Update Member Organisation")
+	.WithDescription("Updates an existing member organisation by its unique identifier.")
+	.Produces<MemberOrganisationResponse>(StatusCodes.Status200OK)
+	.Produces(StatusCodes.Status404NotFound);
+
+memberOrganisations.MapDelete("/{id:guid}", async (Guid id, RegistrationDbContext db) =>
+{
+	var entity = await db.MemberOrganisations.FirstOrDefaultAsync(x => x.Id == id);
+	if (entity is null)
+	{
+		return Results.NotFound();
+	}
+
+	db.MemberOrganisations.Remove(entity);
+	await db.SaveChangesAsync();
+
+	return Results.NoContent();
+})
+	.WithName("DeleteMemberOrganisation")
+	.WithSummary("Delete Member Organisation")
+	.WithDescription("Deletes an existing member organisation by its unique identifier.")
 	.Produces(StatusCodes.Status204NoContent)
 	.Produces(StatusCodes.Status404NotFound);
 
