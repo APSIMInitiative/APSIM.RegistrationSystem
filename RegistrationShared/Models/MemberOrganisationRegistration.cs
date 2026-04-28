@@ -6,7 +6,7 @@ namespace RegistrationShared.Models;
 
 public class MemberOrganisationRegistration : IRegistration
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     [Required]
     [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
@@ -26,7 +26,7 @@ public class MemberOrganisationRegistration : IRegistration
     [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept licence terms to proceed.")]
     public bool AgreesToTerms { get; set; }
 
-    public int MemberOrganisationId { get; set; }
+    public Guid MemberOrganisationId { get; set; }
     public MemberOrganisation MemberOrganisation { get; set; } = null!;
 
 

@@ -10,7 +10,7 @@ namespace RegistrationShared.Models;
 /// </summary>
 public class SpecialUseStaffRegistration : IRegistration
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public string? ContactName { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public string? ContactEmail { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -20,7 +20,7 @@ public class SpecialUseStaffRegistration : IRegistration
 
     public DateTime ApplicationDate { get; set; } = DateTime.UtcNow;
 
-    public int SpecialUseRegistrationId { get; set; }
+    public Guid SpecialUseRegistrationId { get; set; }
     public string SpecialUseRegistration { get; set; } = null!;
 
 }

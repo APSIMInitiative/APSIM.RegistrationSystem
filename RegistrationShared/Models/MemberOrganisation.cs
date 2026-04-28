@@ -4,7 +4,7 @@ namespace RegistrationShared.Models;
 
 public class MemberOrganisation
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     [Required(ErrorMessage = "Please enter the organisation's name.")]
     public string OrganisationName { get; set; } = string.Empty;

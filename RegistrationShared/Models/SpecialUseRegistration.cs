@@ -12,7 +12,7 @@ namespace RegistrationShared.Models;
 /// </summary>
 public class SpecialUseRegistration : IRegistration
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     [Required(ErrorMessage = "Please enter the organisation's name.")]
     public string? OrganisationName { get; set; }
@@ -40,7 +40,7 @@ public class SpecialUseRegistration : IRegistration
     [DataType(DataType.Date)]
     public DateTime ApplicationDate { get; set; } = DateTime.UtcNow;
 
-    public LicenceStatus LicenceStatus { get; set; } = LicenceStatus.SpecialAwaitingReview;
+    public LicenceStatus LicenceStatus { get; set; } = LicenceStatus.AwaitingEmailVerification;
 
     /// <summary>
     /// Indicates whether the applicant agrees to the terms and conditions of 

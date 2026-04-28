@@ -6,7 +6,7 @@ namespace RegistrationShared.Models;
 
 public class GeneralUseRegistration : IRegistration
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     [Required]
     [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
