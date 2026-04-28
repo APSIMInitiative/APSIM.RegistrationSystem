@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using RegistrationShared.Models;
 
 namespace RegistrationWebAPI.Data;
 
 public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> options) : DbContext(options)
 {
     public DbSet<RegistrationEntity> Registrations => Set<RegistrationEntity>();
+
+    public DbSet<MemberOrganisation> MemberOrganisations => Set<MemberOrganisation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +24,15 @@ public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> optio
             entity.HasIndex(e => e.ContactEmail);
             entity.HasIndex(e => e.EmailVerificationToken).IsUnique();
             entity.HasIndex(e => e.ApplicationDate);
+        });
+
+        modelBuilder.Entity<MemberOrganisation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.OrganisationName).HasMaxLength(300).IsRequired();
+            entity.Property(e => e.OrganisationDomain).HasMaxLength(320).IsRequired();
+            entity.Property(e => e.MembershipEstablishmentDate).IsRequired();
+            entity.HasIndex(e => e.OrganisationDomain).IsUnique();
         });
     }
 }

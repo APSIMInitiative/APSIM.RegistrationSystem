@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RegistrationWebAPI.Data;
 
@@ -10,18 +11,20 @@ using RegistrationWebAPI.Data;
 namespace RegistrationWebAPI.Migrations
 {
     [DbContext(typeof(RegistrationDbContext))]
-    partial class RegistrationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260428011332_AddMemberOrganisationSchema")]
+    partial class AddMemberOrganisationSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
 
             modelBuilder.Entity("RegistrationShared.Models.MemberOrganisation", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("MembershipEstablishmentDate")
                         .HasColumnType("TEXT");
@@ -46,9 +49,9 @@ namespace RegistrationWebAPI.Migrations
 
             modelBuilder.Entity("RegistrationShared.Models.MemberOrganisationRegistration", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AgreesToTerms")
                         .HasColumnType("INTEGER");
@@ -67,8 +70,8 @@ namespace RegistrationWebAPI.Migrations
                     b.Property<int>("LicenceStatus")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid>("MemberOrganisationId")
-                        .HasColumnType("TEXT");
+                    b.Property<int>("MemberOrganisationId")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
