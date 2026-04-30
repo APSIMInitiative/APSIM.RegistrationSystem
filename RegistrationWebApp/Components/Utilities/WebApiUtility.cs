@@ -4,7 +4,6 @@ using RegistrationShared.Interfaces;
 using System.Net.Http.Headers;
 using RegistrationShared.Models;
 using System.Net;
-using RegistrationWebApp.Components.Classes;
 
 namespace RegistrationWebApp.Components.Utilities;
 
@@ -361,6 +360,23 @@ public partial class WebApiUtility
     }
 
     /// <summary>
+    /// Adds a new member organisation registration.
+    /// </summary>
+    /// <param name="memberOrgReg">The member organisation registration object to be added.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the HTTP response message.</returns>
+    public async Task<HttpResponseMessage> AddMemberRegistration(MemberOrganisationRegistration memberOrgReg)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        string endpoint = GetEndpointUrl(RegistrationEndpoint);
+        string body = GetRegistrationBody(memberOrgReg);
+        HttpResponseMessage response = await _client.PostAsync(endpoint,
+            new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+        return response;
+    }
+
+
+    /// <summary>
     /// Retrieves a list of member organisations from the web API.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation. 
@@ -376,4 +392,66 @@ public partial class WebApiUtility
         var memberOrganisations = JsonSerializer.Deserialize<List<MemberOrganisation>>(content, JsonOptions) ?? new List<MemberOrganisation>();
         return memberOrganisations;
     }
+
+    /// <summary>
+    /// Retrieves a list of member organisation names from the web API by first getting the list of member organisations and then selecting their names.
+    /// </summary>
+    /// <returns>The task result contains a list of member organisation names.</returns>
+    public async Task<List<string>> GetMemberOrganisationNamesAsync()
+    {
+        List<MemberOrganisation> memberOrganisations = await GetMemberOrganisationsAsync();
+        return memberOrganisations.Select(mo => mo.OrganisationName).ToList();
+    }
+
+    /// <summary>
+    /// Retrieves a list of special use organisation names from the web API by 
+    /// first getting the list of registrations with 
+    /// registrationType=1 (SpecialUse) and licenceStatus=6 (SpecialActive),
+    /// </summary>
+    /// <returns>The task result contains a list of special use organisation names.</returns>
+    public async Task<List<string>> GetSpecialUseOrganisationNames()
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        string endpoint = $"{GetEndpointUrl(RegistrationEndpoint)}";
+        // Requests all registrations with registrationType=1 (SpecialUse) and licenceStatus=6 (SpecialActive), 
+        // then filters the results to return only those with LicenceStatus.SpecialActive.
+        HttpResponseMessage response = await _client.GetAsync(endpoint + $"?registrationType=1&licenceStatus=6");
+        response.EnsureSuccessStatusCode();
+        string content = await response.Content.ReadAsStringAsync();
+        List<SpecialUseRegistration> specialUseRegistrations = JsonSerializer.
+            Deserialize<List<SpecialUseRegistration>>(content, JsonOptions) ?? new List<SpecialUseRegistration>();
+        List<string> specialUseRegistrationNames = specialUseRegistrations.Select(r => r.OrganisationName!).ToList();
+        return specialUseRegistrationNames;
+    }
+
+    /// <summary>
+    /// Retrieves a combined list of member organisation names and 
+    /// special use organisation names by calling the respective methods to 
+    /// get each list and then concatenating the results.
+    /// </summary>
+    /// <returns>The task result contains a list of organisation names.</returns>
+    public async Task<List<string>> GetMemberOrgAndSpecialUseOrgNames()
+    {
+        List<string> memberOrgNames = await GetMemberOrganisationNamesAsync();
+        List<string> specialUseOrgNames = await GetSpecialUseOrganisationNames();
+        return memberOrgNames.Concat(specialUseOrgNames).ToList();
+    }
+
+    /// <summary>
+    /// Adds a new special use staff registration.
+    /// </summary>
+    /// <param name="specialUseStaffReg">The special use staff registration to add.</param>
+    /// <returns>The task result contains the HTTP response message.</returns>
+    public async Task<HttpResponseMessage> AddSpecialUseStaffRegistration(SpecialUseStaffRegistration specialUseStaffReg)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        string body = GetRegistrationBody(specialUseStaffReg);
+        string endpoint = GetEndpointUrl(RegistrationEndpoint);
+        HttpResponseMessage response = await _client.PostAsync(endpoint,
+            new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+        return response;
+    }
+
 }
