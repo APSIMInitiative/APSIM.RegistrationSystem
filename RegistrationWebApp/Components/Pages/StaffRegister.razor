@@ -44,8 +44,7 @@
     private string modalTitle = string.Empty;
     private string modalMessage = string.Empty;
 
-    private List<MemberOrganisation> memberOrganisations = new List<MemberOrganisation>();
-    private List<SpecialUseRegistration> specialUseRegistrations = new List<SpecialUseRegistration>();
+    private List<Organisation> organisations = new List<Organisation>();
 
     /// <summary>
     /// Called when the component is initialized. 
@@ -58,10 +57,8 @@
         try
         {
             formdata.Organisations = await WebApiUtility.GetMemberOrgAndSpecialUseOrgNames();
-            memberOrganisations = await WebApiUtility.GetMemberOrganisationsAsync();
-            specialUseRegistrations = (await WebApiUtility.GetRegistrationsAsync()).
-                OfType<SpecialUseRegistration>().
-                Where(r => r.LicenceStatus == LicenceStatus.SpecialActive).ToList();
+            List<Organisation> responseOrgs = await WebApiUtility.GetMemberOrganisationsAsync();
+            organisations = responseOrgs.Where(o => o.LicencePathway == LicencePathway.APSIMInitiativeMember).ToList();
         }
         catch (Exception ex)
         {
@@ -95,18 +92,16 @@
         Logger.LogInformation("Form submitted with email: {Email}", formdata.EmailInput);
         try
         {
-            if (memberOrganisations.Any<MemberOrganisation>(o => o.OrganisationName == formdata.SelectedOrganisation))
+            if (organisations.Any<Organisation>(o => o.Name == formdata.SelectedOrganisation))
             {
-                MemberOrganisationRegistration registration = new MemberOrganisationRegistration
+                User user = new()
                 {
-                    ContactEmail = formdata.EmailInput,
-                    ContactName = formdata.NameInput,
-                    AgreesToTerms = true,
-                    LicenceStatus = LicenceStatus.AwaitingEmailVerification,
-                    MemberOrganisationId = memberOrganisations.First(o => o.OrganisationName == formdata.SelectedOrganisation).Id
+                    Email = formdata.EmailInput,
+                    LicenceStatus = UserLicenceStatus.Pending,
+                    OrganisationId = organisations.First(o => o.Name == formdata.SelectedOrganisation).Id
                 };
-                HttpResponseMessage response = await WebApiUtility.AddMemberRegistration(registration);
-                if (response.IsSuccessStatusCode)
+                UserResponseModel response = await WebApiUtility.CreateUserAsync(user);
+                if (response.IsSuccess)
                 {
                     ShowModal("Registration Successful", 
                         "You have been successfully registered. Please check your email for further instructions.");
@@ -114,28 +109,6 @@
                 else
                 {
                     ShowModal("Registration Failed", 
-                        "There was an error during registration. Please try again later.");
-                }
-            }
-            else if(specialUseRegistrations.Any<SpecialUseRegistration>(r => r.OrganisationName == formdata.SelectedOrganisation))
-            {
-                SpecialUseStaffRegistration registration = new ()
-                {
-                    ContactEmail = formdata.EmailInput,
-                    ContactName = formdata.NameInput,
-                    AgreesToTerms = true,
-                    LicenceStatus = LicenceStatus.AwaitingEmailVerification,
-                    SpecialUseRegistrationId = specialUseRegistrations.First(r => r.OrganisationName == formdata.SelectedOrganisation).Id
-                };
-                ResponseModel response = await WebApiUtility.CreateRegistrationAsync(registration);
-                if (response.IsSuccess)
-                {
-                    ShowModal("Registration Successful",
-                        "You have been successfully registered. Please check your email for further instructions.");
-                }
-                else
-                {
-                    ShowModal("Registration Failed",
                         "There was an error during registration. Please try again later.");
                 }
             }

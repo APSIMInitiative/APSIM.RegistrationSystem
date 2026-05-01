@@ -116,21 +116,20 @@
         </div>
         <div class="special-use-licence-choice-row row mt-4">
             <div class="col-md-6 offset-md-3 mb-4">
-                <EditForm Model="@specialUseRegistration" OnValidSubmit="() => SubmitApplication(specialUseRegistration)" FormName="specialUseRegistrationForm">
+                <EditForm Model="@organisation" OnValidSubmit="() => SubmitOrganisationApplication(organisation)" FormName="specialUseRegistrationForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
                     <div class="row mb-3">
-                        <InputText class="form-control mb-2" Placeholder="*Email" @bind-Value="specialUseRegistration!.ContactEmail" />
-                        <ValidationMessage For="@(() => specialUseRegistration.ContactEmail)" />
-                        <InputText class="form-control mb-2" Placeholder="*Contact Name" @bind-Value="specialUseRegistration!.ContactName" />
-                        <ValidationMessage For="@(() => specialUseRegistration.ContactName)" />
-                        <InputText class="form-control mb-2" Placeholder="*Organisation Name" @bind-Value="specialUseRegistration!.OrganisationName" />
-                        <ValidationMessage For="@(() => specialUseRegistration.OrganisationName)" />
-                        <InputText class="form-control mb-2" Placeholder="*Organisation Address" @bind-Value="specialUseRegistration!.OrganisationAddress" />
-                        <ValidationMessage For="@(() => specialUseRegistration.OrganisationAddress)" />
-                        <InputText class="form-control mb-2" Placeholder="Organisation Website" @bind-Value="specialUseRegistration!.OrganisationWebsite" />
-                        <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="specialUseRegistration!.ContactPhone" />
-                        <InputSelect class="form-control mb-2" @bind-Value="specialUseRegistration!.LicencePathWay">
+                        <InputText class="form-control mb-2" Placeholder="*Email" @bind-Value="organisation!.ContactEmail" />
+                        <ValidationMessage For="@(() => organisation.ContactEmail)" />
+                        <InputText class="form-control mb-2" Placeholder="*Contact Name" @bind-Value="organisation!.ContactName" />
+                        <ValidationMessage For="@(() => organisation.ContactName)" />
+                        <InputText class="form-control mb-2" Placeholder="*Organisation Name" @bind-Value="organisation!.Name" />
+                        <ValidationMessage For="@(() => organisation.Name)" />
+                        <InputText class="form-control mb-2" Placeholder="*Organisation Address" @bind-Value="organisation!.ContactAddress" />
+                        <ValidationMessage For="@(() => organisation.ContactAddress)" />
+                        <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="organisation!.ContactPhone" />
+                        <InputSelect class="form-control mb-2" @bind-Value="organisation!.LicencePathway">
                             <option value=""disabled>-- Select Licence Pathway --</option>
                             @if (SpecialUseStep <= 3)
                             {
@@ -143,20 +142,19 @@
                                 <option value="@LicencePathway.TypeTwo" disabled selected>@LicencePathway.TypeTwo.GetDescription()</option>
                             }
                         </InputSelect >
-                        <InputSelect class="form-control mb-2" @bind-Value="specialUseRegistration!.AnnualTurnover">
+                        <InputSelect class="form-control mb-2" @bind-Value="organisation!.AnnualTurnover">
                             @foreach (var annualTurnover in Enum.GetValues<AnnualTurnover>())
                             {
                                 <option value="@annualTurnover">@annualTurnover.GetDescription()</option>
                             }
                             <option value="" selected disabled>*-- Select Annual Turnover Range --</option>
                         </InputSelect >
-                        <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="specialUseRegistration!.LicenceStatus">
-                            <option value="@LicenceStatus.AwaitingEmailVerification" selected disabled>@LicenceStatus.AwaitingEmailVerification.GetDescription()</option>
+                        <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="organisation!.LicenceStatus">
+                            <option value="@OrganisationLicenceStatus.Pending" selected disabled>@OrganisationLicenceStatus.Pending.GetDescription()</option>
                         </InputSelect >
-                        <label class="form-check-label mb-2">I have read and agree to the Special Use licence terms. 
+                        <label class="form-check-label mb-2">By clicking submit I have read and agree to the Special Use licence terms. 
                             Please note that final licence classification is confirmed by the APSIM Initiative.
                         </label>
-                        <InputCheckbox class="form-check mb-2" @bind-Value="specialUseRegistration!.AgreesToTerms"></InputCheckbox>
                         <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
                     </div>
                     <div class="row text-center">
@@ -172,25 +170,20 @@
 <div class="general-registration-form-row row " hidden="@(!isGeneralUseRegistrationVisible)">
     <div class="col-md-6 offset-md-3 mt-5 mb-5 p-4 border border-success rounded">
         <h2 class="text-center">General Use Registration</h2>
-        <EditForm Model="@generalUseRegistration" OnValidSubmit="() => SubmitApplication(generalUseRegistration)" FormName="generalUseRegistrationForm">
+        <EditForm Model="@generalUseRegistration" OnValidSubmit="() => SubmitUserApplication(generalUseRegistration)" FormName="generalUseRegistrationForm">
             <DataAnnotationsValidator />
             <ValidationSummary />
             <div class="row mb-3 text-center">
-                <InputText class="form-control mb-2" Placeholder="Email" @bind-Value="generalUseRegistration!.ContactEmail" />
-                <ValidationMessage For="@(() => generalUseRegistration.ContactEmail)" />
-                <InputText class="form-control mb-2" Placeholder="Contact Name" @bind-Value="generalUseRegistration!.ContactName" />
-                <ValidationMessage For="@(() => generalUseRegistration.ContactName)" />
+                <InputText class="form-control mb-2" Placeholder="Email" @bind-Value="generalUseRegistration!.Email" />
+                <ValidationMessage For="@(() => generalUseRegistration.Email)" />
                 <InputSelect hidden @bind-Value="generalUseRegistration!.LicenceStatus" 
                     class="form-control mb-2">
-                    <option value="@LicenceStatus.AwaitingEmailVerification" selected disabled>
-                        @LicenceStatus.GeneralUse.GetDescription()
+                    <option value="@UserLicenceStatus.Pending" selected disabled>
+                        @UserLicenceStatus.General.GetDescription()
                     </option>
                 </InputSelect>
-                <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
                 <label class="form-check-label mb-2" >I have read and agree to the General Use licence terms</label>
-                <InputCheckbox class="form-check mb-2" 
-                    @bind-Value="generalUseRegistration!.AgreesToTerms" >
-                </InputCheckbox>
+                <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
             </div>
             <Row CustomRowClasses="text-center">
                 <Col>
@@ -207,9 +200,9 @@
 </CustomModal>
 
 @code {
-    // Code for handling form submission and any additional logic can be added here.
-    [Parameter]
-    public string? ProductId { get; set; }
+        // Code for handling form submission and any additional logic can be added here.
+        [Parameter]
+        public string? ProductId { get; set; }
 
     public int SpecialUseStep { get; set; } = 0;
 
@@ -222,11 +215,10 @@
         };               
     }
 
-    private SpecialUseRegistration specialUseRegistration { get; set; } = new();
-    private GeneralUseRegistration generalUseRegistration { get; set; } = new();    
+    private Organisation organisation { get; set; } = new();
+    private User generalUseRegistration { get; set; } = new();      
 
     private bool isSpecialUseRegistrationVisible = false;
-
     private bool isGeneralUseRegistrationVisible = false;
 
     private bool showModal = false;
@@ -298,39 +290,27 @@
     /// with the response message. The response message will indicate if the 
     /// registration was successful or if there were any errors. 
     /// </summary>
-    /// <param name="registration"> The registration object containing the user's registration details.</param>
+    /// <param name="user"> The registration object containing the user's registration details.</param>
     /// <returns></returns>
-    private async Task SubmitApplication(IRegistration registration)
+    private async Task SubmitUserApplication(User user)
     {
         try
         {
-            Logger.LogInformation($"Submitting application for {registration.ContactEmail}");
-            ResponseModel response = await WebApiUtility.CreateRegistrationAsync(registration);
+            Logger.LogInformation($"Submitting application for {user.Email}");
+            UserResponseModel response = await WebApiUtility.CreateUserAsync(user);
             string title = "";
             string message = response.Message;
             if (response.IsSuccess)
             {
-                if (response.Registration is SpecialUseRegistration specialUseReg)
-                {
-                    Logger.LogInformation($"Special Use registration successful for {registration.ContactEmail} with licence pathway {specialUseReg.LicencePathWay}");
-                    message = $"A registration confirmation email has been sent to {registration.ContactEmail}.\n" +
-                        "A representative from the APSIM Initiative will be in touch to confirm your licence classification and next steps.\n";
-                    title = "Registration Submitted For Review";
-                    specialUseRegistration = new SpecialUseRegistration(); // Clear the form
-                }
-                else 
-                {
-                    Logger.LogInformation($"Registration successful for {registration.ContactEmail}");
-                    message = "Registration successful!\n" +
-                        $"A registration confirmation email has been sent to {registration.ContactEmail}.\n" +
-                        "Please check your email for a verification link to complete the registration process and download your product.";
-                    title = "Registration Submitted";
-                }
-
+                Logger.LogInformation($"Registration successful for {user.Email}");
+                message = "Registration successful!\n" +
+                    $"A registration confirmation email has been sent to {user.Email}.\n" +
+                    "Please check your email for a verification link to complete the registration process and download your product.";
+                title = "Registration Submitted";           
             }
-            else if (response.Message.Contains("A registration with this email already exists."))   
+            else if (response.Message.Contains("A user with this email already exists."))   
             {
-                Logger.LogWarning($"Registration attempt with existing email: {registration.ContactEmail}");
+                Logger.LogWarning($"Registration attempt with existing email: {user.Email}");
                 message = "A registration with this email already exists.\n" +
                     "If you have not received a confirmation email, please check your spam folder or contact support for assistance.\n" +
                     "Support Email: apsim@csiro.au";
@@ -340,13 +320,44 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, $"An error occurred while submitting registration for {registration.ContactEmail}");
+            Logger.LogError(ex, $"An error occurred while submitting registration for {user.Email}");
             OpenModal("An error occurred while submitting your registration. Please try again later or submit an issue on our GitHub page: https://github.com/APSIMInitiative/APSIM.RegistrationSystem/issues", "Error Submitting Registration");
         }
     }
 
-
-
+    /// <summary>
+    /// Submits an Organisation application to the web API and shows a modal
+    /// </summary>
+    /// <param name="organisation">The organisation registration object containing the organisation's details.</param>
+    /// <returns></returns>
+    private async Task SubmitOrganisationApplication(Organisation organisation)
+    {
+        try
+        {
+            Logger.LogInformation($"Submitting application for {organisation.ContactEmail} from {organisation.Name}");
+            HttpResponseMessage response = await WebApiUtility.AddOrganisationAsync(organisation);
+            if (response.IsSuccessStatusCode)
+            {
+                Logger.LogInformation($"Special Use registration successful for {organisation.ContactEmail} with licence pathway {organisation.LicencePathway}");
+                
+                string message = $"A registration confirmation email has been sent to {organisation.ContactEmail}.\n" +
+                    "A representative from the APSIM Initiative will be in touch to confirm your licence classification and next steps.\n";
+                string title = "Registration Submitted For Review";
+                OpenModal(message, title);
+                this.organisation = new Organisation(); // Clear the form
+            }
+            else
+            {
+                Logger.LogError($"Failed to submit registration for {organisation.ContactEmail} from {organisation.Name}. Status Code: {response.StatusCode}");
+                OpenModal("An error occurred while submitting your registration. Please try again later or submit an issue on our GitHub page: https://github.com/APSIMInitiative/APSIM.RegistrationSystem/issues", "Error Submitting Registration");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"An error occurred while submitting registration for {organisation.ContactEmail}");
+            OpenModal("An error occurred while submitting your registration. Please try again later or submit an issue on our GitHub page: https://github.com/APSIMInitiative/APSIM.RegistrationSystem/issues", "Error Submitting Registration");
+        }
+    }
 
     /// <summary>Opens the modal with a given message and title. </summary>
     /// <param name="message">The message to display in the modal.</param>

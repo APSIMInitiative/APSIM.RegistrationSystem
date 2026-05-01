@@ -26,20 +26,18 @@
                 <table class="table table-sm table-striped table-bordered table-hover">
                     <thead class="table-success">
                         <tr>
-                            <th>Contact Name</th>
-                            <th>Contact Email</th>
+                            <th>Email</th>
                             <th>Licence Status</th>
-                            <th>Registration Date</th>
+                            <th>Date Created</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (GeneralUseRegistration registration in registrations.Where(r => r is GeneralUseRegistration))
+                        @foreach (User registration in users.Where(r => r.LicenceStatus == UserLicenceStatus.General))
                         {
                             <tr>
-                                <td>@registration.ContactName</td>
-                                <td>@registration.ContactEmail</td>
+                                <td>@registration.Email</td>
                                 <td>@registration.LicenceStatus.GetDescription()</td>
-                                <td>@registration.ApplicationDate.ToShortDateString()</td>
+                                <td>@registration.DateCreated.ToShortDateString()</td>
                             </tr>
                         }
                     </tbody>
@@ -61,17 +59,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (SpecialUseRegistration registration in registrations.Where(r => r is SpecialUseRegistration))
+                        @foreach (Organisation organisation in organisations)
                         {
                             <tr>
-                                <td>@registration.ContactName</td>
-                                <td>@registration.ContactEmail</td>
-                                <td>@registration.OrganisationName</td>
-                                <td>@registration.OrganisationAddress</td>
-                                <td>@registration.LicencePathWay.GetDescription()</td>
-                                <td>@registration.AnnualTurnover.GetDescription()</td>
-                                <td>@registration.ApplicationDate.ToShortDateString()</td>
-                                <td>@registration.SpecialUseStaffRegistrations.Count()</td>
+                                <td>@organisation.ContactName</td>
+                                <td>@organisation.ContactEmail</td>
+                                <td>@organisation.ContactAddress</td>
+                                <td>@organisation.LicencePathway.GetDescription()</td>
+                                <td>@organisation.AnnualTurnover.GetDescription()</td>
+                                <td>@organisation.DateCreated.ToShortDateString()</td>
+                                <td>@organisation.Users.Count()</td>
                             </tr>
                         }
                     </tbody>
@@ -92,9 +89,7 @@
                     <DataAnnotationsValidator />
                     <ValidationSummary />
                         <label for="organisationName" class="form-label">Organisation Name</label>
-                        <InputText id="organisationName" class="form-control" @bind-Value="MemberOrganisation.OrganisationName" placeholder="Enter organisation name e.g. CSIRO" />
-                        <label for="organisationDomain" class="form-label>">Organisation Domain</label>
-                        <InputText id="organisationDomain" class="form-control" @bind-Value="MemberOrganisation.OrganisationDomain" placeholder="example: csiro.au or iastate.edu this is the last part of a members email" />
+                        <InputText id="organisationName" class="form-control" @bind-Value="MemberOrganisation.Name" placeholder="Enter organisation name e.g. CSIRO" />
                         <button type="submit" class="btn btn-primary mt-3">Add Member Organisation</button>
                 </EditForm>
             </Col>
@@ -104,17 +99,15 @@
                     <thead class="table-success">
                         <tr>
                             <th>Organisation Name</th>
-                            <th>Organisation Domain</th>
-                            <th>Membership Establishment Date</th>
+                            <th>Date Created</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var memberOrg in memberOrganisations)
+                        @foreach (var memberOrg in organisations)
                         {
                             <tr>
-                                <td>@memberOrg.OrganisationName</td>
-                                <td>@memberOrg.OrganisationDomain</td>
-                                <td>@memberOrg.MembershipEstablishmentDate.ToShortDateString()</td>
+                                <td>@memberOrg.Name</td>
+                                <td>@memberOrg.DateCreated.ToShortDateString()</td>
                             </tr>
                         }
                     </tbody>
@@ -133,24 +126,30 @@
     private bool isModalOpen = false;
     private string modalTitle = string.Empty;
     private string modalMessage = string.Empty;
-    private MemberOrganisation MemberOrganisation { get; set; } = new MemberOrganisation();
-    private List<IRegistration> registrations = new List<IRegistration>();
-    private List<MemberOrganisation> memberOrganisations = new List<MemberOrganisation>();
+    private Organisation MemberOrganisation { get; set; } = new Organisation();
+    private List<User> users = new List<User>();
+    private List<Organisation> organisations = new List<Organisation>();
 
     private async Task HandleNewMemberOrganisationSubmit()
     {
-        Logger.LogInformation($"New Member Organisation Submitted: {MemberOrganisation.OrganisationName}");
-        HttpResponseMessage response = await WebApiUtility.AddMemberOrganisationAsync(MemberOrganisation);
+        Logger.LogInformation($"New Member Organisation Submitted: {MemberOrganisation.Name}");
+        if (MemberOrganisation.LicencePathway != LicencePathway.APSIMInitiativeMember)
+        {
+            Logger.LogWarning($"Attempted to add member organisation with invalid licence pathway: {MemberOrganisation.LicencePathway}");
+            ShowModal("Error", "Invalid licence pathway. Member organisations must have the 'APSIM Initiative Member' licence pathway.");
+            return;
+        }
+        HttpResponseMessage response = await WebApiUtility.AddOrganisationAsync(MemberOrganisation);
         if (response.IsSuccessStatusCode)
         {
             Logger.LogInformation("Member organisation added successfully.");
-            MemberOrganisation = new MemberOrganisation(); // Clear the form
+            MemberOrganisation = new Organisation(); // Clear the form
             ShowModal("Success", "Member organisation added successfully.");
         }
         else
         {
             Logger.LogError($"Failed to add member organisation. Status Code: {response.StatusCode}");
-            ShowModal("Error", $"Failed to add member organisation {MemberOrganisation.OrganisationName}. Status Code: {response.StatusCode}");
+            ShowModal("Error", $"Failed to add member organisation {MemberOrganisation.Name}. Status Code: {response.StatusCode}");
         }
     }
 
@@ -163,8 +162,8 @@
         try
         {
             Logger.LogInformation("Admin page initialized. Fetching registrations and member organisations.");
-            registrations = await WebApiUtility.GetRegistrationsAsync();
-            memberOrganisations = await WebApiUtility.GetMemberOrganisationsAsync();
+            users = await WebApiUtility.GetUsersAsync();
+            organisations = await WebApiUtility.GetMemberOrganisationsAsync();
         }
         catch (Exception ex)
         {
