@@ -1,4 +1,3 @@
-@using RegistrationShared.Interfaces
 @using RegistrationShared.Models
 @using RegistrationShared.Enums
 @using RegistrationWebApp.Components.Classes.Utilities
@@ -11,6 +10,7 @@
 @rendermode InteractiveServer
 @inject WebApiUtility WebApiUtility
 @inject ILogger<Admin> Logger
+@inject NavigationManager NavigationManager
 
 <PageTitle>Registration Admin</PageTitle>
 <h2 class="text-center">Registration Admin</h2>
@@ -32,7 +32,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (User registration in users.Where(r => r.LicenceStatus == UserLicenceStatus.General))
+                        @foreach (User registration in users.
+                            Where(r => r.LicenceStatus == UserLicenceStatus.General).
+                            OrderByDescending(r => r.DateCreated))
                         {
                             <tr>
                                 <td>@registration.Email</td>
@@ -44,14 +46,15 @@
                 </table>
             </Col>
             <Col CustomColClasses="col-12 col-md-5 m-3 ">
-                <h3>Special Use Registrations</h3>
+                <h3>Organisations</h3>
                 <table class="table table-sm table-striped table-bordered table-hover">
                     <thead class="table-success">
                         <tr>
+                            <th>Organisation Name</th>
                             <th>Contact Name</th>
                             <th>Contact Email</th>
-                            <th>Organisation Name</th>
-                            <th>Organisation Address</th>
+                            <th>Contact Phone</th>
+                            <th>Contact Address</th>
                             <th>Licence Pathway</th>
                             <th>Annual Turnover</th>
                             <th>Application Date</th>
@@ -59,11 +62,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (Organisation organisation in organisations)
+                        @foreach (Organisation organisation in organisations.OrderByDescending(o => o.DateCreated))
                         {
                             <tr>
+                                <td>@organisation.Name</td>
                                 <td>@organisation.ContactName</td>
                                 <td>@organisation.ContactEmail</td>
+                                <td>@organisation.ContactPhone</td>
                                 <td>@organisation.ContactAddress</td>
                                 <td>@organisation.LicencePathway.GetDescription()</td>
                                 <td>@organisation.AnnualTurnover.GetDescription()</td>
@@ -89,7 +94,25 @@
                     <DataAnnotationsValidator />
                     <ValidationSummary />
                         <label for="organisationName" class="form-label">Organisation Name</label>
-                        <InputText id="organisationName" class="form-control" @bind-Value="MemberOrganisation.Name" placeholder="Enter organisation name e.g. CSIRO" />
+                        <InputText id="organisationName" class="form-control" @bind-Value="MemberOrganisation.Name" 
+                            placeholder="Enter organisation name e.g. CSIRO" />
+                        <InputText id="contactName" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactName" 
+                            placeholder="Enter contact name e.g. John Doe" />
+                        <InputText id="contactEmail" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactEmail" 
+                            placeholder="Enter contact email e.g. john.doe@example.com" />
+                        <InputText id="contactPhone" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactPhone" 
+                            placeholder="Enter contact phone e.g. +61 123 456 789" />
+                        <InputText id="contactAddress" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactAddress" 
+                            placeholder="Enter contact address e.g. 123 Main St, City, Country" />
+                        <InputSelect id="licencePathway" class="form-select mt-2" @bind-Value="MemberOrganisation.LicencePathway">
+                            <option value="@LicencePathway.APSIMInitiativeMember" selected>@LicencePathway.APSIMInitiativeMember.GetDescription()</option>
+                        </InputSelect>
+                        <InputSelect id="annualTurnover" class="form-select mt-2" @bind-Value="MemberOrganisation.AnnualTurnover">
+                            <option value="@AnnualTurnover.BelowTwoMillion" selected>@AnnualTurnover.BelowTwoMillion.GetDescription()</option>
+                        </InputSelect>
+                        <InputSelect id="licenceStatus" class="form-select mt-2" @bind-Value="MemberOrganisation.LicenceStatus">
+                            <option value="@OrganisationLicenceStatus.Active" selected>@OrganisationLicenceStatus.Active.GetDescription()</option>
+                        </InputSelect>
                         <button type="submit" class="btn btn-primary mt-3">Add Member Organisation</button>
                 </EditForm>
             </Col>
@@ -100,14 +123,18 @@
                         <tr>
                             <th>Organisation Name</th>
                             <th>Date Created</th>
+                            <th>No. Registered Members</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var memberOrg in organisations)
+                        @foreach (var memberOrg in organisations 
+                            .Where(o => o.LicencePathway == 
+                            LicencePathway.APSIMInitiativeMember))
                         {
                             <tr>
                                 <td>@memberOrg.Name</td>
                                 <td>@memberOrg.DateCreated.ToShortDateString()</td>
+                                <td>@memberOrg.Users.Count()</td>
                             </tr>
                         }
                     </tbody>
@@ -126,17 +153,39 @@
     private bool isModalOpen = false;
     private string modalTitle = string.Empty;
     private string modalMessage = string.Empty;
-    private Organisation MemberOrganisation { get; set; } = new Organisation();
+
+    /// <summary>
+    /// This property represents a member organisation that can be added through the admin interface.
+    /// </summary>
+    /// <remarks>
+    /// The default values for the LicencePathway, AnnualTurnover, and LicenceStatus properties
+    /// are set to APSIMInitiativeMember, BelowTwoMillion, and Active respectively to ensure values are preselected
+    /// properly.
+    /// </remarks>
+    private Organisation MemberOrganisation { get; set; } = new Organisation{
+        LicencePathway = LicencePathway.APSIMInitiativeMember,
+        AnnualTurnover = AnnualTurnover.BelowTwoMillion,
+        LicenceStatus = OrganisationLicenceStatus.Active
+    };
+
     private List<User> users = new List<User>();
     private List<Organisation> organisations = new List<Organisation>();
 
+    /// <summary>
+    /// Handle the submission of a new member organisation. 
+    /// This method is called when the form for adding a new member organisation is submitted.
+    /// </summary>
+    /// <returns></returns>
     private async Task HandleNewMemberOrganisationSubmit()
     {
         Logger.LogInformation($"New Member Organisation Submitted: {MemberOrganisation.Name}");
         if (MemberOrganisation.LicencePathway != LicencePathway.APSIMInitiativeMember)
         {
-            Logger.LogWarning($"Attempted to add member organisation with invalid licence pathway: {MemberOrganisation.LicencePathway}");
-            ShowModal("Error", "Invalid licence pathway. Member organisations must have the 'APSIM Initiative Member' licence pathway.");
+            Logger.LogWarning(
+                $"Attempted to add member organisation with invalid licence pathway: {MemberOrganisation.LicencePathway}"
+            );
+            ShowModal("Error", 
+            "Invalid licence pathway.Member organisations must have the 'APSIM Initiative Member' licence pathway.");
             return;
         }
         HttpResponseMessage response = await WebApiUtility.AddOrganisationAsync(MemberOrganisation);
@@ -151,6 +200,7 @@
             Logger.LogError($"Failed to add member organisation. Status Code: {response.StatusCode}");
             ShowModal("Error", $"Failed to add member organisation {MemberOrganisation.Name}. Status Code: {response.StatusCode}");
         }
+        NavigationManager.Refresh(true); // Refresh the page to show the updated list of organisations
     }
 
     // This method is called when the component is initialized. 

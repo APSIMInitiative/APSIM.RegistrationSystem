@@ -1,4 +1,3 @@
-using RegistrationShared.Interfaces;
 using RegistrationShared.Models;
 
 namespace RegistrationWebApp.Components.Utilities.Models;

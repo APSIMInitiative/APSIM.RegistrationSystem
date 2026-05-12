@@ -5,34 +5,24 @@ namespace RegistrationWebAPI.Data;
 
 public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> options) : DbContext(options)
 {
-    public DbSet<RegistrationEntity> Registrations => Set<RegistrationEntity>();
+    public DbSet<UserEntity> Users => Set<UserEntity>();
 
-    public DbSet<MemberOrganisation> MemberOrganisations => Set<MemberOrganisation>();
+    public DbSet<OrganisationEntity> Organisations => Set<OrganisationEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<RegistrationEntity>(entity =>
+        modelBuilder.Entity<UserEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.ContactName).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.ContactEmail).HasMaxLength(320).IsRequired();
-            entity.Property(e => e.EmailVerificationToken).HasMaxLength(64);
-            entity.Property(e => e.OrganisationName).HasMaxLength(300);
-            entity.Property(e => e.OrganisationAddress).HasMaxLength(500);
-            entity.Property(e => e.OrganisationWebsite).HasMaxLength(500);
-            entity.Property(e => e.ContactPhone).HasMaxLength(50);
-            entity.HasIndex(e => e.ContactEmail);
-            entity.HasIndex(e => e.EmailVerificationToken).IsUnique();
-            entity.HasIndex(e => e.ApplicationDate);
+            entity.Property(e => e.Email).IsRequired();
+            entity.HasIndex(e => e.Email).IsUnique();
         });
 
-        modelBuilder.Entity<MemberOrganisation>(entity =>
+        modelBuilder.Entity<OrganisationEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.OrganisationName).HasMaxLength(300).IsRequired();
-            entity.Property(e => e.OrganisationDomain).HasMaxLength(320).IsRequired();
-            entity.Property(e => e.MembershipEstablishmentDate).IsRequired();
-            entity.HasIndex(e => e.OrganisationDomain).IsUnique();
+            entity.Property(e => e.Name).IsRequired();
+            entity.HasIndex(e => e.Name).IsUnique();
         });
     }
 }

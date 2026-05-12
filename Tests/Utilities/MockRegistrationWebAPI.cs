@@ -81,12 +81,21 @@ public sealed class MockRegistrationWebAPI : WebApplicationFactory<RegistrationW
 		}
 	}
 
-	public async Task SeedRegistrationAsync(RegistrationEntity entity)
+	public async Task SeedUserAsync(UserEntity entity)
 	{
 		using var scope = Services.CreateScope();
 		var dbContext = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
 
-		dbContext.Registrations.Add(entity);
+		dbContext.Users.Add(entity);
+		await dbContext.SaveChangesAsync();
+	}
+
+	public async Task SeedOrganisationAsync(OrganisationEntity entity)
+	{
+		using var scope = Services.CreateScope();
+		var dbContext = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
+
+		dbContext.Organisations.Add(entity);
 		await dbContext.SaveChangesAsync();
 	}
 
@@ -152,8 +161,4 @@ public sealed class MockRegistrationWebAPI : WebApplicationFactory<RegistrationW
 
 		Environment.SetEnvironmentVariable(key, value);
 	}
-}
-
-public class RegistrationWebApiMarker
-{
 }

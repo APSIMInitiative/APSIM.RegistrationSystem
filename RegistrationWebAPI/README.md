@@ -384,8 +384,8 @@ All of the above, plus:
 
 The API uses SQLite for persistence. The database file is created automatically on first run:
 
-- **Development**: `APSIMRegistrationV2_Dev.db`
-- **Production**: `APSIMRegistrationV2.db`
+- **Development**: `APSIMRegistrationSystemWebAPI.db`
+- **Production**: `APSIMRegistrationSystemWebAPI.db`
 
 Database schema is managed with Entity Framework Core migrations. All migrations are applied automatically on startup.
 
@@ -492,7 +492,7 @@ Stop-Process -Name dotnet -Force
 
 **"Jwt:SigningKey is not configured"**: Check that `.env` includes `JWT_SIGNING_KEY` with at least 32 characters.
 
-**"Database migration failed"**: Delete `APSIMRegistrationV2*.db` files to reset the database, then rebuild.
+**"Database migration failed"**: Delete `APSIMRegistrationSystemWebAPI.db` files to reset the database, then rebuild.
 
 ## Contributing
 

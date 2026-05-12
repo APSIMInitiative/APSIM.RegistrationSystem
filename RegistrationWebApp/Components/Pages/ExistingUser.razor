@@ -2,7 +2,7 @@
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/existing-user/{Product}"
-@using RegistrationShared.Interfaces
+@using RegistrationShared.Models
 @using RegistrationWebApp.Components.Layout.CustomLayout
 @using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
 @using RegistrationWebApp.Components.Utilities
@@ -69,25 +69,18 @@
     /// </summary>
     private async Task OnCheckRegistration(string emailInput)
     {
-        bool registrationStatusFound = false;
         Logger.LogInformation("Checking registration status for product: {Product}", Product);
-        List<IRegistration> registrations = await WebApiUtility.GetRegistrationsAsync();
-        foreach (var registration in registrations.Where(
-            r => (int)r.LicenceStatus >= 2 && 
-            (int)r.LicenceStatus < 8))
+        var users = await WebApiUtility.GetUsersAsync();
+        bool found = users.Any(u => string.Equals(u.Email, emailInput, StringComparison.OrdinalIgnoreCase));
+        if (!found)
         {
-
-            if (registration.ContactEmail == emailInput)
-            {
-                Logger.LogInformation("Registration found for email: {Email}", emailInput);
-                registrationStatusFound = true;
-            }
+            Logger.LogInformation("No user found for email: {Email}", emailInput);
         }
-        if (!registrationStatusFound)
+        else
         {
-            Logger.LogInformation("No registration found for email: {Email}", emailInput);
+            Logger.LogInformation("User found for email: {Email}", emailInput);
         }
-        OpenModal("Registration Status", registrationStatusFound ? "Registration found." : "No registration found.");
+        OpenModal("Registration Status", found ? "Registration found." : "No registration found.");
     }
 
     private void OpenModal(string title, string message)

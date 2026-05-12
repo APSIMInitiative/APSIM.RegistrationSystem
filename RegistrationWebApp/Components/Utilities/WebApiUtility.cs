@@ -1,6 +1,5 @@
 using System.Text.Json;
 using RegistrationWebApp.Components.Utilities.Models;
-using RegistrationShared.Interfaces;
 using System.Net.Http.Headers;
 using RegistrationShared.Models;
 using System.Net;
@@ -23,7 +22,7 @@ public partial class WebApiUtility
     private string AuthenticationToken { get; set; } = string.Empty;
 
     private const string AuthTokenEndpoint = "api/auth/token";
-    private const string RegistrationEndpoint = "api/registrations";
+    private const string UsersEndpoint = "api/users";
     private const string OrganisationsEndpoint = "api/organisations";
 
     /// <summary>The name of the environment variable that can be used to 
@@ -173,61 +172,48 @@ public partial class WebApiUtility
     }
 
     /// <summary>
-    /// Retrieves a list of users from the web API by sending a GET request to the registrations endpoint.
+    /// Retrieves a list of users from the web API.
     /// </summary>
-    /// <returns>A list of User objects representing the users retrieved from the web API.</returns>
     public async Task<List<User>> GetUsersAsync()
     {
         string token = await GetAuthenticationToken();
         AuthenticateRequest(_client, token);
-        HttpResponseMessage response = await _client.GetAsync(RegistrationEndpoint);
+        HttpResponseMessage response = await _client.GetAsync(GetEndpointUrl(UsersEndpoint));
         response.EnsureSuccessStatusCode();
         string content = await response.Content.ReadAsStringAsync();
-        var users = JsonSerializer.Deserialize<List<User>>(content, JsonOptions) ?? new List<User>();
-        return users;
+        return JsonSerializer.Deserialize<List<User>>(content, JsonOptions) ?? new List<User>();
     }
 
     /// <summary>
-    /// Creates a new user registration by sending a POST request to the web API with the user data serialized in the request body.
-     /// The method first retrieves an authentication token, then constructs the request body based on the type
+    /// Creates a new user by sending a POST request to the web API.
     /// </summary>
-    /// <param name="user">The user object containing the registration details.</param>
-    /// <returns>A UserResponseModel indicating the result of the registration attempt.</returns>
+    /// <param name="user">The user object to create.</param>
     public async Task<UserResponseModel> CreateUserAsync(User user)
     {
         string token = await GetAuthenticationToken();
         AuthenticateRequest(_client, token);
         string body = JsonSerializer.Serialize(user);
-        HttpResponseMessage response = await _client.PostAsync(RegistrationEndpoint,
+        HttpResponseMessage response = await _client.PostAsync(GetEndpointUrl(UsersEndpoint),
             new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
         if (response.StatusCode == HttpStatusCode.Conflict)
         {
-            return new UserResponseModel { Message = "A registration with this email already exists.", User = null };
+            return new UserResponseModel { Message = "A user with this email already exists.", User = null };
         }
         response.EnsureSuccessStatusCode();
-        // Try to deserialize the response into a GeneralUseRegistration first, then a SpecialUseRegistration if that fails.
         string responseContent = await response.Content.ReadAsStringAsync();
-        User? newUser = JsonSerializer.Deserialize<User>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? null;
+        User? newUser = JsonSerializer.Deserialize<User>(responseContent, JsonOptions);
         return new UserResponseModel { Message = "Registration successful.", User = newUser };
     }
 
 
     /// <summary>
-    /// Checks if a registration with the specified email already exists by retrieving the list of registrations from the web API and checking for a matching contact email.
+    /// Checks whether a user with the given email exists in the system.
     /// </summary>
-    /// <param name="email">The email address to check for an existing registration.</param>
-    /// <returns>A task that represents the asynchronous operation. 
-    /// The task result contains a boolean indicating whether a registration with the specified email exists.</returns>
+    /// <param name="email">The email address to look up.</param>
     public async Task<bool> CheckRegistrationEmailAsync(string email)
     {
-        string token = await GetAuthenticationToken();
-        AuthenticateRequest(_client, token);
-        string endpoint = $"{RegistrationEndpoint}?contactEmail={email}";
-        HttpResponseMessage response = await _client.GetAsync(endpoint);
-        response.EnsureSuccessStatusCode();
-        string content = await response.Content.ReadAsStringAsync();
-        var registrationsJson = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(content, JsonOptions);
-        return registrationsJson?.FirstOrDefault(r => r["contactEmail"].GetString() == email) != null;
+        var users = await GetUsersAsync();
+        return users.Any(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -249,21 +235,6 @@ public partial class WebApiUtility
         return response;
     }
 
-    /// <summary>
-    /// Adds a new member organisation registration.
-    /// </summary>
-    /// <param name="memberOrgReg">The member organisation registration object to be added.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the HTTP response message.</returns>
-    public async Task<HttpResponseMessage> AddMemberRegistration(MemberOrganisationRegistration memberOrgReg)
-    {
-        string token = await GetAuthenticationToken();
-        AuthenticateRequest(_client, token);
-        string endpoint = GetEndpointUrl(RegistrationEndpoint);
-        string body = JsonSerializer.Serialize(memberOrgReg);
-        HttpResponseMessage response = await _client.PostAsync(endpoint,
-            new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
-        return response;
-    }
 
 
     /// <summary>
@@ -294,25 +265,15 @@ public partial class WebApiUtility
     }
 
     /// <summary>
-    /// Retrieves a list of special use organisation names from the web API by 
-    /// first getting the list of registrations with 
-    /// registrationType=1 (SpecialUse) and licenceStatus=6 (SpecialActive),
+    /// Retrieves names of organisations with a Special Use licence pathway.
     /// </summary>
-    /// <returns>The task result contains a list of special use organisation names.</returns>
     public async Task<List<string>> GetSpecialUseOrganisationNames()
     {
-        string token = await GetAuthenticationToken();
-        AuthenticateRequest(_client, token);
-        string endpoint = $"{GetEndpointUrl(OrganisationsEndpoint)}";
-        // Requests all registrations with registrationType=1 (SpecialUse) and licenceStatus=6 (SpecialActive), 
-        // then filters the results to return only those with LicenceStatus.SpecialActive.
-        HttpResponseMessage response = await _client.GetAsync(endpoint + $"?registrationType=1&licenceStatus=6");
-        response.EnsureSuccessStatusCode();
-        string content = await response.Content.ReadAsStringAsync();
-        List<Organisation> specialUseOrganisations = JsonSerializer.
-            Deserialize<List<Organisation>>(content, JsonOptions) ?? new List<Organisation>();
-        List<string> specialUseOrganisationNames = specialUseOrganisations.Select(r => r.Name!).ToList();
-        return specialUseOrganisationNames;
+        var organisations = await GetMemberOrganisationsAsync();
+        return organisations
+            .Where(o => o.LicencePathway == LicencePathway.TypeOne || o.LicencePathway == LicencePathway.TypeTwo)
+            .Select(o => o.Name)
+            .ToList();
     }
 
     /// <summary>
