@@ -11,9 +11,29 @@
 @inject WebApiUtility WebApiUtility
 @inject ILogger<Admin> Logger
 @inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
 
 <PageTitle>Registration Admin</PageTitle>
 <h2 class="text-center">Registration Admin</h2>
+
+<div hidden="@isAuthenticated">
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-6 col-lg-4 border rounded p-4 text-start">
+                <p class="mb-3">Enter the admin password to continue.</p>
+                <label for="adminPassword" class="form-label">Password</label>
+                <input id="adminPassword" type="password" class="form-control" @bind="adminPasswordInput" />
+                @if (!string.IsNullOrWhiteSpace(passwordErrorMessage))
+                {
+                    <div class="text-danger mt-2">@passwordErrorMessage</div>
+                }
+                <button type="button" class="btn btn-primary mt-3" @onclick="AuthenticateAdminAsync">Unlock Admin</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div hidden="@(!isAuthenticated)">
 <p class="text-center">This is the admin page. Here you can manage your products and licenses.</p>
 <Row CustomRowClasses="licence-row mt-4 border text-center">
     <Col CustomColClasses="col-12 col-md-12">
@@ -147,10 +167,15 @@
 <CustomModal @bind-IsOpen="isModalOpen" Title="@modalTitle">
     @modalMessage
 </CustomModal>
+</div>
 
 @code{
 
     private bool isModalOpen = false;
+    private bool isAuthenticated = false;
+    private string adminPasswordInput = string.Empty;
+    private string configuredAdminPassword = string.Empty;
+    private string passwordErrorMessage = string.Empty;
     private string modalTitle = string.Empty;
     private string modalMessage = string.Empty;
 
@@ -170,6 +195,26 @@
 
     private List<User> users = new List<User>();
     private List<Organisation> organisations = new List<Organisation>();
+
+    private async Task AuthenticateAdminAsync()
+    {
+        if (string.IsNullOrWhiteSpace(configuredAdminPassword))
+        {
+            passwordErrorMessage = "Admin password is not configured. Please contact an administrator.";
+            return;
+        }
+
+        if (!string.Equals(adminPasswordInput, configuredAdminPassword, StringComparison.Ordinal))
+        {
+            passwordErrorMessage = "Incorrect password.";
+            return;
+        }
+
+        isAuthenticated = true;
+        passwordErrorMessage = string.Empty;
+        adminPasswordInput = string.Empty;
+        await LoadAdminDataAsync();
+    }
 
     /// <summary>
     /// Handle the submission of a new member organisation. 
@@ -207,11 +252,20 @@
     // It retrieves data required for the admin page, such as the list of 
     // registrations and member organisations, and handles any errors 
     // that may occur during data retrieval.
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
+    {
+        configuredAdminPassword = Configuration["Admin:Password"] ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(configuredAdminPassword))
+            Logger.LogWarning("Admin password is not configured. The admin page cannot be unlocked.");
+
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadAdminDataAsync()
     {
         try
         {
-            Logger.LogInformation("Admin page initialized. Fetching registrations and member organisations.");
+            Logger.LogInformation("Admin page authenticated. Fetching registrations and member organisations.");
             users = await WebApiUtility.GetUsersAsync();
             organisations = await WebApiUtility.GetMemberOrganisationsAsync();
         }
