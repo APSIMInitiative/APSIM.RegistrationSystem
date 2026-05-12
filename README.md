@@ -37,11 +37,32 @@ dotnet build RegistrationSystem.sln
 dotnet run --project RegistrationWebAPI/RegistrationWebAPI.csproj
 ```
 
-### Run the Web App
+### Run the Web App (Standard)
+
+Use this when you want a normal app run without file watching:
+
+```bash
+dotnet run --project RegistrationWebApp/RegistrationWebApp.csproj
+```
+
+### Run the Web App (Watch / Hot Reload)
+
+Use watch mode during UI development so changes are picked up automatically and hot reload is applied when possible:
 
 ```bash
 dotnet watch run --project RegistrationWebApp/RegistrationWebApp.csproj
 ```
+
+### Run Watch Mode from VS Code Task Menu
+
+You can start the same watch workflow from the VS Code terminal menu:
+
+1. Open VS Code in this repository.
+2. Select **Terminal** from the top menu.
+3. Choose **Run Task...**.
+4. Select **Just Watch RegistrationWebApp**.
+
+This starts the configured task that runs the web app in watch mode from the `RegistrationWebApp` project directory.
 
 ### Run Tests
 
