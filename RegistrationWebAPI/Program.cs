@@ -28,6 +28,7 @@ builder.Configuration
         ["Jwt:Audience"] = Environment.GetEnvironmentVariable("Jwt__Audience"),
         ["Jwt:SigningKey"] = Environment.GetEnvironmentVariable("Jwt__SigningKey"),
         ["Jwt:TokenExpiryMinutes"] = Environment.GetEnvironmentVariable("Jwt__TokenExpiryMinutes"),
+        ["Verification:BaseUrl"] = Environment.GetEnvironmentVariable("Verification__BaseUrl")
     });
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
@@ -102,7 +103,8 @@ if (!File.Exists(verificationPagePath))
     throw new InvalidOperationException($"Verification page was not found at '{verificationPagePath}'.");
 }
 
-var verificationPageHtml = File.ReadAllText(verificationPagePath);
+/// Load the verification page HTML and replace the placeholder with the configured base URL for verification links.
+var verificationPageHtml = File.ReadAllText(verificationPagePath).Replace("{{VerificationBaseUrl}}", builder.Configuration["Verification:BaseUrl"]);
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
