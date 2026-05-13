@@ -24,6 +24,8 @@ public partial class WebApiUtility
     private const string AuthTokenEndpoint = "api/auth/token";
     private const string UsersEndpoint = "api/users";
     private const string OrganisationsEndpoint = "api/organisations";
+    private const string DownloadLinkEndpoint = "api/downloads/link";
+    private const string DownloadTokenValidationEndpoint = "api/downloads/validate";
 
     /// <summary>The name of the environment variable that can be used to 
     /// override the web API base URL configured in appsettings.json.</summary>
@@ -214,6 +216,56 @@ public partial class WebApiUtility
     {
         var users = await GetUsersAsync();
         return users.Any(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Validates a download access token with the web API.
+    /// </summary>
+    /// <param name="token">The token from the download page query string.</param>
+    public async Task<DownloadTokenValidationResponse?> ValidateDownloadTokenAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        string endpoint = GetEndpointUrl($"{DownloadTokenValidationEndpoint}?token={Uri.EscapeDataString(token)}");
+        HttpResponseMessage response = await _client.GetAsync(endpoint);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        string content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<DownloadTokenValidationResponse>(content, JsonOptions);
+    }
+
+    /// <summary>
+    /// Requests a download link redirect URL from the API for an existing registered user.
+    /// </summary>
+    /// <param name="email">The email address to validate for download access.</param>
+    public async Task<string?> GetDownloadRedirectLinkAsync(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        string endpoint = GetEndpointUrl($"{DownloadLinkEndpoint}?email={Uri.EscapeDataString(email.Trim())}");
+
+        using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+        using var client = new HttpClient(handler);
+        using var response = await client.GetAsync(endpoint);
+
+        if (response.StatusCode == HttpStatusCode.Found ||
+            response.StatusCode == HttpStatusCode.Moved ||
+            response.StatusCode == HttpStatusCode.TemporaryRedirect ||
+            response.StatusCode == HttpStatusCode.PermanentRedirect)
+        {
+            return response.Headers.Location?.ToString();
+        }
+
+        return null;
     }
 
     /// <summary>

@@ -3,18 +3,18 @@
 @namespace RegistrationWebApp.Components.Layout.CustomLayout
 
 <div class="card product-box" >
-    <div class="card-header text-center">
+    @* <div class="card-header text-center">
         <h3 class="card-title">@Product.Name</h3>
-    </div>
-    <img src="@Product.ImageUrl" alt="@Product.Name" class="card-img-top" />
+    </div> *@
+    <img src="@Product.ImageUrl" alt="@Product.Name" class="card-img-top w-25 mx-auto d-block" />
     <div class="card-body align-items-end">
         <p class="card-description">@Product.Description</p>
     </div>
-    <div class="card-footer text-center">
-        <NavLink href="@Product.Href" class="btn btn-success">@Product.FirstButtonText</NavLink>
+    <div class="product-footer text-center">
+        <NavLink href="@Product.Href" class="btn btn-success rounded-pill m-2">@Product.FirstButtonText</NavLink>
         @if (!string.IsNullOrEmpty(Product.SecondHref) && !string.IsNullOrEmpty(Product.SecondButtonText))
         {
-            <NavLink href="@Product.SecondHref" class="btn btn-primary m-2">@Product.SecondButtonText</NavLink>
+            <NavLink href="@Product.SecondHref" class="btn btn-primary rounded-pill m-2 pill-button">@Product.SecondButtonText</NavLink>
         }
     </div>
 </div>

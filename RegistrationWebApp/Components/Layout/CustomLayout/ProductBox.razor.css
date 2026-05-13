@@ -1,8 +1,10 @@
 .product-box{
-    border: 1px solid #038007;
-    border-radius: 8px;
+    /* border: 1px solid #038007; */
+    border-radius: 16px;
     background-color: #ffffff;
+    border-color: white;
     /* height: 100%; */
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
 }
 
 .product-box > .card-body {
@@ -12,6 +14,16 @@
 .product-box:hover *{
     /* background-color:#038007; */
     transition: background-color 0.3s ease, color 0.3s ease, border-width 0.3s ease;
-    color: #038007;
+    color: #000000;
+}
+
+.product-box .card-title {
+    color: #2f8f2f;
+    /* font-size: 1.25rem;
+    font-weight: 600; */
+}
+
+.product-footer{
+    padding-bottom: 2%;
 }
 

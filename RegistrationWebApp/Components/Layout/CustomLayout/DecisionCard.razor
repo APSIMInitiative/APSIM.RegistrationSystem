@@ -5,17 +5,17 @@
 @if (IsVisible)
 {
     <div class="decision-card card mt-4">
-        <div class="card-header">
+        <div class="decision-card-header">
             <h5><strong>Step @StepNumber:</strong> @StepQuestionText</h5>
         </div>
         <div class="card-body">
             @* <p>This means you are intending to use APSIM in a commercial setting, such as for profit or business purposes.</p> *@
             <p>@Description</p>
         </div>
-        <div class="card-footer">
-            <button class="btn btn-success" @onclick="@ToggleYes">@DecisionOneText</button>
-            <button class="btn btn-danger" @onclick="@ToggleNo">@DecisionTwoText</button>
-            <button class="btn btn-secondary float-end" @onclick="@ToggleThirdOption">@DecisionThreeText</button>
+        <div id="decision-card-footer" class="decision-card-footer">
+            <button class="btn btn-success rounded-pill p-2 me-3" @onclick="@ToggleYes">@DecisionOneText</button>
+            <button class="btn btn-danger rounded-pill p-2" @onclick="@ToggleNo">@DecisionTwoText</button>
+            <button class="btn btn-secondary rounded-pill p-2 float-end" @onclick="@ToggleThirdOption">@DecisionThreeText</button>
         </div>
     </div>
 }

@@ -1,6 +1,10 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    background-color: #f0f0f0;
+    font-family: Montserrat, sans-serif;
+    background-color: #f4f8f2;
+}
+
+h1, h2, h3 {
+    color: #2f8f2f;
 }
 
 a, .btn-link {
@@ -59,3 +63,14 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.pill-button
+{
+    box-shadow: 0 8px 20px rgba(47, 143, 47, 0.25);
+}
+
+.pill-button-primary
+{
+    box-shadow: 0 8px 20px rgba(47, 100, 143, 0.25);
+}
+

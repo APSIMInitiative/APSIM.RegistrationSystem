@@ -7,9 +7,12 @@
 @using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
 @using RegistrationWebApp.Components.Utilities
 @using RegistrationWebApp.Components.Utilities.Models
+@using Microsoft.AspNetCore.WebUtilities
 @using System.ComponentModel.DataAnnotations
 @inject ILogger<ExistingUser> Logger
 @inject WebApiUtility WebApiUtility
+@inject DownloadAccessState DownloadAccessState
+@inject NavigationManager NavigationManager
 
 @rendermode InteractiveServer
 
@@ -17,20 +20,20 @@
 <PageTitle>Existing Users</PageTitle>
 
 <Row>
-    <Col CustomColClasses="col-12 col-md-8 offset-md-2">
-        <h2 class="text-center">Existing Users</h2>
+    <div class="col email col-lg-6 offset-lg-3 col-md-8 offset-md-2">
+        <h2 class="text-center m-3">Existing Users</h2>
         <p class="text-center">If you have already registered and just want to download the product, you can do so here.</p>
-        <div class="alert alert-info" role="alert">
-        If your registration status is confirmed, we will provide a download link in an email sent to the provided email address.
+        <div class="alert alert-info w-50 mx-auto" role="alert">
+        If your registration status is confirmed, you will be redirected to the download page.
         </div>
         <EditForm Model="@formdata" OnValidSubmit="() => OnCheckRegistration(formdata.emailInput)" class="text-center m-4 ">
             <div class="mb-3">
                 <label for="emailInput" class="form-label">Email address</label>
-                <input type="email" class="form-control" id="emailInput" placeholder="Enter your email" @bind-value="formdata.emailInput" required>
+                <input type="email" class="form-control w-75 mx-auto" id="emailInput" placeholder="Enter your email" @bind-value="formdata.emailInput" required>
             </div>
-            <button type="submit" class="btn btn-primary">Check registration status</button>
+            <button type="submit" class="btn btn-primary rounded-pill pill-button-primary">Check registration status</button>
         </EditForm>
-    </Col>
+    </div>
 </Row>
 
 <CustomModal Title="@modalTitle" @bind-IsOpen="showModal">
@@ -70,17 +73,37 @@
     private async Task OnCheckRegistration(string emailInput)
     {
         Logger.LogInformation("Checking registration status for product: {Product}", Product);
-        var users = await WebApiUtility.GetUsersAsync();
-        bool found = users.Any(u => string.Equals(u.Email, emailInput, StringComparison.OrdinalIgnoreCase));
-        if (!found)
+        string? redirectLink = await WebApiUtility.GetDownloadRedirectLinkAsync(emailInput);
+
+        if (string.IsNullOrWhiteSpace(redirectLink))
         {
             Logger.LogInformation("No user found for email: {Email}", emailInput);
+            OpenModal("Registration Status", "No registration found.");
+            return;
         }
-        else
+
+        if (!Uri.TryCreate(redirectLink, UriKind.Absolute, out var redirectUri))
         {
-            Logger.LogInformation("User found for email: {Email}", emailInput);
+            Logger.LogWarning("Download redirect link was not a valid absolute URI.");
+            OpenModal("Registration Status", "Unable to create your download link. Please try again.");
+            return;
         }
-        OpenModal("Registration Status", found ? "Registration found." : "No registration found.");
+
+        var query = QueryHelpers.ParseQuery(redirectUri.Query);
+        var token = query.TryGetValue("token", out var tokenValues)
+            ? tokenValues.FirstOrDefault()
+            : null;
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Logger.LogWarning("Download redirect link did not include a token.");
+            OpenModal("Registration Status", "Unable to create your download link. Please try again.");
+            return;
+        }
+
+        DownloadAccessState.SetToken(token);
+        Logger.LogInformation("User found for email: {Email}. Redirecting to clean download page URL.", emailInput);
+        NavigationManager.NavigateTo("/download");
     }
 
     private void OpenModal(string title, string message)

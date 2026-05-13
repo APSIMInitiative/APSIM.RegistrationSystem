@@ -29,7 +29,7 @@
 			"label": "Just Watch RegistrationWebApp",
 			"type": "dotnet",
 			"task": "watch RegistrationWebApp",
-			"file": "RegistrationWebApp.csproj",
+			"file": "${workspaceFolder}/RegistrationWebApp/RegistrationWebApp.csproj",
 			"problemMatcher": "$msCompile",
 			"options": {
 				"cwd": "${workspaceFolder}/RegistrationWebApp"

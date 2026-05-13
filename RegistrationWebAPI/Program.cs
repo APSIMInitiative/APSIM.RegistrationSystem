@@ -28,7 +28,9 @@ builder.Configuration
         ["Jwt:Audience"] = Environment.GetEnvironmentVariable("Jwt__Audience"),
         ["Jwt:SigningKey"] = Environment.GetEnvironmentVariable("Jwt__SigningKey"),
         ["Jwt:TokenExpiryMinutes"] = Environment.GetEnvironmentVariable("Jwt__TokenExpiryMinutes"),
-        ["Verification:BaseUrl"] = Environment.GetEnvironmentVariable("Verification__BaseUrl")
+        ["Verification:BaseUrl"] = Environment.GetEnvironmentVariable("Verification__BaseUrl"),
+        ["Download:BaseUrl"] = Environment.GetEnvironmentVariable("Download__BaseUrl"),
+        ["Download:TokenLifetimeHours"] = Environment.GetEnvironmentVariable("Download__TokenLifetimeHours")
     });
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
@@ -36,6 +38,16 @@ var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOper
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is not configured.");
 var jwtExpiryMinutes = int.TryParse(builder.Configuration["Jwt:TokenExpiryMinutes"], out var expiryMinutes) ? expiryMinutes : 60;
 var verificationTokenLifetimeHours = int.TryParse(builder.Configuration["Verification:TokenLifetimeHours"], out var tokenLifetimeHours) ? tokenLifetimeHours : 24;
+var downloadTokenLifetimeHours = int.TryParse(builder.Configuration["Download:TokenLifetimeHours"], out var configuredDownloadTokenLifetimeHours)
+    ? configuredDownloadTokenLifetimeHours
+    : 48;
+if (downloadTokenLifetimeHours <= 0)
+{
+    downloadTokenLifetimeHours = 48;
+}
+
+var downloadBaseUrl = builder.Configuration["Download:BaseUrl"] ?? builder.Configuration["Verification:BaseUrl"];
+const string downloadAccessPurposeClaim = "download-access";
 
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
@@ -192,6 +204,129 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithName("GetHealth")
     .WithTags("Health")
     .Produces(StatusCodes.Status200OK);
+
+app.MapGet("/api/downloads/link", async (string email, RegistrationDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(downloadBaseUrl))
+    {
+        return Results.Problem("Download base URL is not configured.", statusCode: StatusCodes.Status500InternalServerError);
+    }
+
+    if (string.IsNullOrWhiteSpace(email))
+    {
+        return Results.BadRequest("Email is required.");
+    }
+
+    string normalizedEmail;
+    try
+    {
+        normalizedEmail = new MailAddress(email.Trim()).Address;
+    }
+    catch (FormatException)
+    {
+        return Results.BadRequest("Email is not valid.");
+    }
+
+    var user = await db.Users
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.Email == normalizedEmail);
+
+    if (user is null || user.LicenceStatus is UserLicenceStatus.None or UserLicenceStatus.Pending)
+    {
+        return Results.NotFound("No eligible registration was found for that email address.");
+    }
+
+    var now = DateTime.UtcNow;
+    var expiresAt = now.AddHours(downloadTokenLifetimeHours);
+    var claims = new[]
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, normalizedEmail),
+        new Claim(JwtRegisteredClaimNames.Email, normalizedEmail),
+        new Claim("purpose", downloadAccessPurposeClaim),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+    var signingCredentials = new SigningCredentials(
+        new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+        SecurityAlgorithms.HmacSha256);
+
+    var token = new JwtSecurityToken(
+        issuer: jwtIssuer,
+        audience: jwtAudience,
+        claims: claims,
+        notBefore: now,
+        expires: expiresAt,
+        signingCredentials: signingCredentials);
+
+    var tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
+    var downloadPageUrl = new Uri(new Uri(downloadBaseUrl), "download").ToString();
+    var redirectUrl = $"{downloadPageUrl}?token={Uri.EscapeDataString(tokenValue)}";
+    return Results.Redirect(redirectUrl);
+})
+    .AllowAnonymous()
+    .WithName("CreateDownloadAccessLink")
+    .WithTags("Downloads")
+    .Produces(StatusCodes.Status302Found)
+    .Produces(StatusCodes.Status400BadRequest)
+    .Produces(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status500InternalServerError);
+
+app.MapGet("/api/downloads/validate", (string token) =>
+{
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        return Results.BadRequest("Download token is required.");
+    }
+
+    var validationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateIssuerSigningKey = true,
+        ValidateLifetime = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+        ClockSkew = TimeSpan.FromMinutes(1)
+    };
+
+    try
+    {
+        var handler = new JwtSecurityTokenHandler();
+        var principal = handler.ValidateToken(token, validationParameters, out var validatedToken);
+        var jwtToken = validatedToken as JwtSecurityToken;
+
+        var purpose = principal.Claims.FirstOrDefault(c => c.Type == "purpose")?.Value;
+        var email = principal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value
+            ?? principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+
+        if (!string.Equals(purpose, downloadAccessPurposeClaim, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(email) || jwtToken is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        return Results.Ok(new
+        {
+            isValid = true,
+            email,
+            expiresAtUtc = jwtToken.ValidTo
+        });
+    }
+    catch (SecurityTokenExpiredException)
+    {
+        return Results.BadRequest("Download token has expired.");
+    }
+    catch (SecurityTokenException)
+    {
+        return Results.Unauthorized();
+    }
+})
+    .AllowAnonymous()
+    .WithName("ValidateDownloadAccessToken")
+    .WithTags("Downloads")
+    .Produces(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status400BadRequest)
+    .Produces(StatusCodes.Status401Unauthorized);
 
 var users = app.MapGroup("/api/users")
     .WithTags("Users")

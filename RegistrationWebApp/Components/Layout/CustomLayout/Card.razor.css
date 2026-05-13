@@ -1,6 +1,7 @@
 .custom-card {
-   border: 2px solid darkgrey;
-   border-radius: 10px;
+   /* border: 2px solid darkgrey; */
+   border-radius: 16px;
+   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
 
 }
 
@@ -12,5 +13,5 @@
 
 .card-header h5 
 {
-   color:white;
+   color: #2f8f2f;
 }
