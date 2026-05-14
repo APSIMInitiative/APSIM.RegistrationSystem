@@ -41,6 +41,11 @@ public class UserEntity
     public Guid OrganisationId { get; set; }
 
     /// <summary>
+    /// Navigation property to the organisation the user belongs to.
+    /// </summary>
+    public OrganisationEntity? Organisation { get; set; }
+
+    /// <summary>
     /// One-time token used to verify the user's email address.
     /// </summary>
     public string? EmailVerificationToken { get; set; }
