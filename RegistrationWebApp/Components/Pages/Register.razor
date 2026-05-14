@@ -15,14 +15,14 @@
 @*This page allows users to select a product licence and register for it. The content of the page changes based on the selected product.*@
 @rendermode InteractiveServer
 @inject ILogger<Register> Logger
-@inject WebApiUtility WebApiUtility
+@inject WebApiUtility webApiUtility
 
 <PageTitle>Pick Product Licence</PageTitle>
 <div class="row mt-4">
     <div class="col">
         <h1 class="text-center">@PageHeading</h1>
-        <div class="row mt-4">
-            <div class="col-md-6">
+        <div class="row mt-4 g-3">
+            <div class="col-lg-4 offset-lg-2 col-md-6">
                 <DotPointCard 
                     Title="Using APSIM for learning or research purposes?" 
                     Description=@GeneralDotPoints
@@ -31,7 +31,7 @@
                     BodyButtonText="Full Licence details"
                 />
             </div>
-            <div class="col-md-6">
+            <div class="col-lg-4 col-md-6">
                 <DotPointCard 
                     Title="Using APSIM for commercial purposes?" 
                     Description=@SpecialDotPoints
@@ -48,7 +48,7 @@
 <div class="special-use-licence-choice-row row mt-4 mb-4">
     @if (ProductId is not null)
     {
-    <div class="col">
+    <div class="col-8 offset-2">
         <div class="row text-center">
             <h3>Not quite sure which one to pick? </h3>
             <h4>Go through the steps below.</h4>
@@ -181,6 +181,14 @@
                         @UserLicenceStatus.General.GetDescription()
                     </option>
                 </InputSelect>
+                <label class="form-label mb-2">Optionally register with an organisation</label>
+                <InputSelect class="form-control mb-2" @bind-Value="generalUseRegistration!.OrganisationId">
+                    <option value="" selected>*-- Optionally register with an organisation --</option>
+                    @foreach (var organisation in organisations)
+                    {
+                        <option value="@organisation.Id">@organisation.Name</option>
+                    }
+                </InputSelect>
                 <label class="form-check-label mb-2" >I have read and agree to the General Use licence terms</label>
                 <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
             </div>
@@ -214,6 +222,8 @@
         };               
     }
 
+    private List<Organisation> organisations = new List<Organisation>();
+
     private Organisation organisation { get; set; } = new();
     private User generalUseRegistration { get; set; } = new();      
 
@@ -243,6 +253,22 @@
         "Licencee can keep modifications for private use (Type 2) or "+
         "submit back to the APSIM Initiative for potential inclusion in the main codebase (Type 1)"
     };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        try
+        {
+            organisations = await webApiUtility.GetOrganisationsAsync() ?? new List<Organisation>();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "An error occurred while fetching organisations from the API.");
+            OpenModal("Error", "An error occurred while loading the registration form." +
+                " Please try again later or submit an issue on our GitHub page: " +
+                "https://github.com/APSIMInitiative/APSIM.RegistrationSystem");
+        }
+    }
 
     private async Task ToggleSpecialSharingYes()
     {
@@ -296,7 +322,7 @@
         try
         {
             Logger.LogInformation($"Submitting application for {user.Email}");
-            UserResponseModel response = await WebApiUtility.CreateUserAsync(user);
+            UserResponseModel response = await webApiUtility.CreateUserAsync(user);
             string title = "";
             string message = response.Message;
             if (response.IsSuccess)
@@ -320,7 +346,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, $"An error occurred while submitting registration for {user.Email}");
-            OpenModal("An error occurred while submitting your registration. Please try again later or submit an issue on our GitHub page: https://github.com/APSIMInitiative/APSIM.RegistrationSystem/issues", "Error Submitting Registration");
+            OpenModal("Error Submitting Registration", "An error occurred while submitting your registration. Please try again later or submit an issue on our GitHub page: https://github.com/APSIMInitiative/APSIM.RegistrationSystem/issues");
         }
     }
 
@@ -334,7 +360,7 @@
         try
         {
             Logger.LogInformation($"Submitting application for {organisation.ContactEmail} from {organisation.Name}");
-            HttpResponseMessage response = await WebApiUtility.AddOrganisationAsync(organisation);
+            HttpResponseMessage response = await webApiUtility.AddOrganisationAsync(organisation);
             if (response.IsSuccessStatusCode)
             {
                 Logger.LogInformation($"Special Use registration successful for {organisation.ContactEmail} with licence pathway {organisation.LicencePathway}");
