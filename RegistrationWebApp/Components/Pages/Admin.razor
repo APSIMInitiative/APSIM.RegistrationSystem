@@ -35,8 +35,8 @@
 
 <div hidden="@(!isAuthenticated)">
 <p class="text-center">This is the admin page. Here you can manage your products and licenses.</p>
-<Row CustomRowClasses="licence-row mt-4 border text-center">
-    <Col CustomColClasses="col-12 col-md-12">
+<div class="row licence-row mt-4 border text-center">
+    <div classes="col licence-col text-danger col-12 col-md-12">
         <h2 class="text-center">Licenses</h2>
         <p class="text-center">Here you can manage licences through their lifecycle</p>
 
@@ -79,6 +79,7 @@
                             <th>Annual Turnover</th>
                             <th>Application Date</th>
                             <th>Registered Members</th>
+                            <th>Licence Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -94,14 +95,15 @@
                                 <td>@organisation.AnnualTurnover.GetDescription()</td>
                                 <td>@organisation.DateCreated.ToShortDateString()</td>
                                 <td>@organisation.Users.Count()</td>
+                                <td>@organisation.LicenceStatus.GetDescription()</td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </Col>
         </Row>
-    </Col>
-</Row>
+    </div>
+</div>
 
 <Row CustomRowClasses="mt-4 border text-center">
     <Col CustomColClasses="col-12 col-lg-12 col-md-6">
@@ -267,7 +269,7 @@
         {
             Logger.LogInformation("Admin page authenticated. Fetching registrations and member organisations.");
             users = await WebApiUtility.GetUsersAsync();
-            organisations = await WebApiUtility.GetMemberOrganisationsAsync();
+            organisations = await WebApiUtility.GetOrganisationsAsync();
         }
         catch (Exception ex)
         {
