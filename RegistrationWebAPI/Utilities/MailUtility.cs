@@ -118,7 +118,7 @@ public class MailUtility
                         <h1 style=""margin:0;color:#2f8f2f;font-size:2rem;"">Your Download Link</h1>
                     </td></tr>
                     <tr><td align=""center"" style=""padding-bottom:16px;font-size:1rem;line-height:1.6;"">
-                        <p style=""margin:0 0 12px;"">Your download link is ready. Click the button below to access your download.</p>
+                        <p style=""margin:0 0 12px;"">Click the button below to access downloads.</p>
                     </td></tr>
                     <tr><td align=""center"" style=""padding-bottom:24px;font-size:0.9rem;color:#666;line-height:1.6;"">
                         <p style=""margin:0;""><strong>Note:</strong> This link expires in <strong>48 hours</strong>.</p>
@@ -126,7 +126,7 @@ public class MailUtility
                     <tr><td align=""center"">
                         <table border=""0"" cellspacing=""0"" cellpadding=""0"" style=""margin:0 auto;"">
                         <tr><td align=""center"" bgcolor=""#2f8f2f"" style=""border-radius:999px;box-shadow:0 8px 20px rgba(47,143,47,0.25);"">
-                            <a href=""{downloadLink}"" target=""_blank"" style=""background:#2f8f2f;color:#ffffff;text-decoration:none;border-radius:999px;padding:14px 28px;font-size:1rem;font-weight:600;display:inline-block;"">Get Download Link</a>
+                            <a href=""{downloadLink}"" target=""_blank"" style=""background:#2f8f2f;color:#ffffff;text-decoration:none;border-radius:999px;padding:14px 28px;font-size:1rem;font-weight:600;display:inline-block;"">Go to downloads</a>
                         </td></tr>
                         </table>
                     </td></tr>
