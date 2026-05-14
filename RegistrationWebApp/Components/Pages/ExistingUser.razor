@@ -73,37 +73,16 @@
     private async Task OnCheckRegistration(string emailInput)
     {
         Logger.LogInformation("Checking registration status for product: {Product}", Product);
-        string? redirectLink = await WebApiUtility.GetDownloadRedirectLinkAsync(emailInput);
+        bool downloadLinkEmailSent = await WebApiUtility.GetDownloadRedirectLinkAsync(emailInput);
 
-        if (string.IsNullOrWhiteSpace(redirectLink))
+        if (!downloadLinkEmailSent)
         {
             Logger.LogInformation("No user found for email: {Email}", emailInput);
             OpenModal("Registration Status", "No registration found.");
             return;
         }
-
-        if (!Uri.TryCreate(redirectLink, UriKind.Absolute, out var redirectUri))
-        {
-            Logger.LogWarning("Download redirect link was not a valid absolute URI.");
-            OpenModal("Registration Status", "Unable to create your download link. Please try again.");
-            return;
-        }
-
-        var query = QueryHelpers.ParseQuery(redirectUri.Query);
-        var token = query.TryGetValue("token", out var tokenValues)
-            ? tokenValues.FirstOrDefault()
-            : null;
-
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            Logger.LogWarning("Download redirect link did not include a token.");
-            OpenModal("Registration Status", "Unable to create your download link. Please try again.");
-            return;
-        }
-
-        DownloadAccessState.SetToken(token);
-        Logger.LogInformation("User found for email: {Email}. Redirecting to clean download page URL.", emailInput);
-        NavigationManager.NavigateTo("/download");
+        Logger.LogInformation("Download link email sent to: {Email}", emailInput);
+        OpenModal("Email sent!", $"A download link has been sent to {emailInput}. Please check your inbox.");
     }
 
     private void OpenModal(string title, string message)

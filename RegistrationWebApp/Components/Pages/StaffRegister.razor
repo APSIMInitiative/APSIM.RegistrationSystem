@@ -57,7 +57,7 @@
         try
         {
             formdata.Organisations = await WebApiUtility.GetMemberOrgAndSpecialUseOrgNames();
-            List<Organisation> responseOrgs = await WebApiUtility.GetMemberOrganisationsAsync();
+            List<Organisation> responseOrgs = await WebApiUtility.GetOrganisationsAsync();
             organisations = responseOrgs.Where(o => o.LicencePathway == LicencePathway.APSIMInitiativeMember).ToList();
         }
         catch (Exception ex)

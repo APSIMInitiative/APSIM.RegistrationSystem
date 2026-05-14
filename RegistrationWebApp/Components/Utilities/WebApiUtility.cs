@@ -244,11 +244,11 @@ public partial class WebApiUtility
     /// Requests a download link redirect URL from the API for an existing registered user.
     /// </summary>
     /// <param name="email">The email address to validate for download access.</param>
-    public async Task<string?> GetDownloadRedirectLinkAsync(string email)
+    public async Task<bool> GetDownloadRedirectLinkAsync(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
         {
-            return null;
+            return false;
         }
 
         string endpoint = GetEndpointUrl($"{DownloadLinkEndpoint}?email={Uri.EscapeDataString(email.Trim())}");
@@ -256,16 +256,11 @@ public partial class WebApiUtility
         using var handler = new HttpClientHandler { AllowAutoRedirect = false };
         using var client = new HttpClient(handler);
         using var response = await client.GetAsync(endpoint);
-
-        if (response.StatusCode == HttpStatusCode.Found ||
-            response.StatusCode == HttpStatusCode.Moved ||
-            response.StatusCode == HttpStatusCode.TemporaryRedirect ||
-            response.StatusCode == HttpStatusCode.PermanentRedirect)
+        if (response.StatusCode != HttpStatusCode.OK)
         {
-            return response.Headers.Location?.ToString();
+            return false;
         }
-
-        return null;
+        return true;
     }
 
     /// <summary>
