@@ -294,7 +294,7 @@ public partial class WebApiUtility
     /// </summary>
     /// <returns>A task that represents the asynchronous operation. 
     /// The task result contains a list of Organisation objects.</returns>
-    public async Task<List<Organisation>> GetMemberOrganisationsAsync()
+    public async Task<List<Organisation>> GetOrganisationsAsync()
     {
         string token = await GetAuthenticationToken();
         AuthenticateRequest(_client, token);
@@ -312,7 +312,7 @@ public partial class WebApiUtility
     /// <returns>The task result contains a list of member organisation names.</returns>
     public async Task<List<string>> GetMemberOrganisationNamesAsync()
     {
-        List<Organisation> Organisations = await GetMemberOrganisationsAsync();
+        List<Organisation> Organisations = await GetOrganisationsAsync();
         return Organisations.Where(o => o.LicencePathway == LicencePathway.APSIMInitiativeMember).Select(o => o.Name).ToList();
     }
 
@@ -321,7 +321,7 @@ public partial class WebApiUtility
     /// </summary>
     public async Task<List<string>> GetSpecialUseOrganisationNames()
     {
-        var organisations = await GetMemberOrganisationsAsync();
+        var organisations = await GetOrganisationsAsync();
         return organisations
             .Where(o => o.LicencePathway == LicencePathway.TypeOne || o.LicencePathway == LicencePathway.TypeTwo)
             .Select(o => o.Name)
