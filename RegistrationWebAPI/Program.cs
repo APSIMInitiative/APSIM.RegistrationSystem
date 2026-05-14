@@ -30,7 +30,8 @@ builder.Configuration
         ["Jwt:TokenExpiryMinutes"] = Environment.GetEnvironmentVariable("Jwt__TokenExpiryMinutes"),
         ["Verification:BaseUrl"] = Environment.GetEnvironmentVariable("Verification__BaseUrl"),
         ["Download:BaseUrl"] = Environment.GetEnvironmentVariable("Download__BaseUrl"),
-        ["Download:TokenLifetimeHours"] = Environment.GetEnvironmentVariable("Download__TokenLifetimeHours")
+        ["Download:TokenLifetimeHours"] = Environment.GetEnvironmentVariable("Download__TokenLifetimeHours"),
+        ["Branding:LogoUrl"] = Environment.GetEnvironmentVariable("Branding__LogoUrl")
     });
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
@@ -48,6 +49,16 @@ if (downloadTokenLifetimeHours <= 0)
 
 var downloadBaseUrl = builder.Configuration["Download:BaseUrl"] ?? builder.Configuration["Verification:BaseUrl"];
 const string downloadAccessPurposeClaim = "download-access";
+
+static string ResolveTemplateLogoUrl(string? configuredLogoUrl, string? baseUrl)
+{
+    if (!string.IsNullOrWhiteSpace(configuredLogoUrl))
+    {
+        return configuredLogoUrl;
+    }
+
+    return "https://www.apsim.info/wp-content/uploads/2026/05/APSIM_transparent-154x100-1.png";
+}
 
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
@@ -115,8 +126,14 @@ if (!File.Exists(verificationPagePath))
     throw new InvalidOperationException($"Verification page was not found at '{verificationPagePath}'.");
 }
 
+var templateLogoUrl = ResolveTemplateLogoUrl(
+    builder.Configuration["Branding:LogoUrl"],
+    builder.Configuration["Verification:BaseUrl"] ?? downloadBaseUrl);
+
 /// Load the verification page HTML and replace the placeholder with the configured base URL for verification links.
-var verificationPageHtml = File.ReadAllText(verificationPagePath).Replace("{{VerificationBaseUrl}}", builder.Configuration["Verification:BaseUrl"]);
+var verificationPageHtml = File.ReadAllText(verificationPagePath)
+    .Replace("{{VerificationBaseUrl}}", builder.Configuration["Verification:BaseUrl"])
+    .Replace("{{LogoUrl}}", templateLogoUrl);
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -260,13 +277,22 @@ app.MapGet("/api/downloads/link", async (string email, RegistrationDbContext db)
 
     var tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
     var downloadPageUrl = new Uri(new Uri(downloadBaseUrl), "download").ToString();
-    var redirectUrl = $"{downloadPageUrl}?token={Uri.EscapeDataString(tokenValue)}";
-    return Results.Redirect(redirectUrl);
+        var downloadLink = $"{downloadPageUrl}?token={Uri.EscapeDataString(tokenValue)}";
+    
+        if (mailUtility is not null)
+        {
+            await mailUtility.SendDownloadLinkEmailAsync(normalizedEmail, downloadLink);
+            return Results.Ok(new { message = "Download link has been sent to your email address. It expires in 48 hours." });
+        }
+        else
+        {
+            return Results.Problem("Email service is not configured.", statusCode: StatusCodes.Status500InternalServerError);
+        }
 })
     .AllowAnonymous()
     .WithName("CreateDownloadAccessLink")
     .WithTags("Downloads")
-    .Produces(StatusCodes.Status302Found)
+    .Produces(StatusCodes.Status200OK)
     .Produces(StatusCodes.Status400BadRequest)
     .Produces(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status500InternalServerError);
