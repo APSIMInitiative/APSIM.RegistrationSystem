@@ -56,7 +56,7 @@
         <DecisionCard 
             StepNumber="1"
             StepQuestionText="Do you intend to use APSIM for commercial purposes?"
-            Description="This means you are intending to use APSIM in a commercial setting, such as for profit or business purposes."
+            Description=@StepOneDescription
             ToggleYes="ToggleUseInReleased"
             ToggleNo="ToggleGeneral"
             ToggleThirdOption="ToggleAll"
@@ -65,7 +65,7 @@
         <DecisionCard 
             StepNumber="2"
             StepQuestionText="Do you intend to only use installed/released versions of APSIM?"
-            Description="This means you will only use installed versions of APSIM and not make any modifications to the source code."
+            Description=@StepTwoDescription
             DecisionOneText="Yes"
             DecisionTwoText="No"
             ToggleYes="ToggleSpecial"
@@ -76,7 +76,7 @@
         <DecisionCard 
             StepNumber="3"
             StepQuestionText="Do you intend to make modifications to the APSIM source code?"
-            Description="This means you will be making changes to the APSIM source code, such as adding new features, adding new models, and fixing bugs or changing existing code."
+            Description=@StepThreeDescription
             DecisionOneText="Yes"
             DecisionTwoText="No"
             ToggleYes="ToggleImprovementsShared"
@@ -87,7 +87,7 @@
         <DecisionCard 
             StepNumber="4"
             StepQuestionText="Do you intend to share any modifications made back to the APSIM Initiative?"
-            Description="This means you are happy to submit any modifications you make back to the APSIM Initiative for potential inclusion in the main codebase."
+            Description=@StepFourDescription
             DecisionOneText="Yes"
             DecisionTwoText="No"
             ToggleYes="ToggleSpecialSharingYes"
@@ -207,9 +207,10 @@
 </CustomModal>
 
 @code {
-        // Code for handling form submission and any additional logic can be added here.
-        [Parameter]
-        public string? ProductId { get; set; }
+
+    // Code for handling form submission and any additional logic can be added here.
+    [Parameter]
+    public string? ProductId { get; set; }
 
     public int SpecialUseStep { get; set; } = 0;
 
@@ -221,6 +222,16 @@
             _ => "Pick a Product Licence"
         };               
     }
+
+    private MarkupString StepOneDescription => new MarkupString("<p>This means you are intending to use " +
+    "APSIM in a commercial setting, such as for profit or business purposes.</p>" +
+    "<p><strong>(Users who intend to register against APSIM Initiative Member Organisation or Special Use Licence should also click 'No' )</strong></p>");
+
+    private MarkupString StepTwoDescription => new MarkupString("<p>This means you will only use installed versions of APSIM and not make any modifications to the source code.</p>");
+
+    private MarkupString StepThreeDescription => new MarkupString("<p>This means you will be making changes to the APSIM source code, such as adding new features, adding new models, and fixing bugs or changing existing code.</p>");
+
+    private MarkupString StepFourDescription => new MarkupString("<p>This means you are happy to submit any modifications you make back to the APSIM Initiative for potential inclusion in the main codebase.</p>");
 
     private List<Organisation> organisations = new List<Organisation>();
 
@@ -259,7 +270,9 @@
         await base.OnInitializedAsync();
         try
         {
-            organisations = await webApiUtility.GetOrganisationsAsync() ?? new List<Organisation>();
+            organisations = (await webApiUtility.GetOrganisationsAsync()).
+                Where(o => o.LicenceStatus == OrganisationLicenceStatus.Active).ToList() ?? 
+                new List<Organisation>();
         }
         catch (Exception ex)
         {
