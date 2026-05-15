@@ -11,10 +11,10 @@
         <p class="card-description">@Product.Description</p>
     </div>
     <div class="product-footer text-center">
-        <NavLink href="@Product.Href" class="btn btn-success rounded-pill m-2">@Product.FirstButtonText</NavLink>
+        <NavLink href="@Product.Href" class="btn btn-success rounded-pill m-2 pill-button">@Product.FirstButtonText</NavLink>
         @if (!string.IsNullOrEmpty(Product.SecondHref) && !string.IsNullOrEmpty(Product.SecondButtonText))
         {
-            <NavLink href="@Product.SecondHref" class="btn btn-primary rounded-pill m-2 pill-button">@Product.SecondButtonText</NavLink>
+            <NavLink href="@Product.SecondHref" class="btn btn-primary rounded-pill m-2 pill-button-primary">@Product.SecondButtonText</NavLink>
         }
     </div>
 </div>
