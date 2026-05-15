@@ -9,10 +9,16 @@
     </div> *@
     <main>
         <article class="content px-4">
-            <a href="/" >
-                <img class="d-block mb-3" src="/APSIM_transparent-154x100.png" alt="APSIM logo" />
-            </a>
-            @Body
+            <div class="row g-4 align-items-start">
+                <div class="col-12 col-md-auto">
+                    <a id="apsim-main-logo" href="/" class="d-inline-block">
+                        <img class="d-block" src="/APSIM_transparent-154x100.png" alt="APSIM logo" />
+                    </a>
+                </div>
+                <div class="col-12 col-md">
+                    @Body
+                </div>
+            </div>
         </article>
         <Footer />
     </main>

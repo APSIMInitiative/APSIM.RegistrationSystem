@@ -2,15 +2,15 @@
 
 @namespace RegistrationWebApp.Components.Layout.CustomLayout
 
-<div class="card product-box p-3" >
+<div class="card product-box p-3 h-100" >
     @* <div class="card-header text-center">
         <h3 class="card-title">@Product.Name</h3>
     </div> *@
     <img src="@Product.ImageUrl" alt="@Product.Name" class="card-img-top w-25 mx-auto d-block" />
-    <div class="card-body align-items-end">
-        <p class="card-description">@Product.Description</p>
+    <div class="card-body align-items-end h-100">
+        @Product.Description
     </div>
-    <div class="product-footer text-center">
+    <div class="product-footer text-center mt-auto">
         <NavLink href="@Product.Href" class="btn btn-success rounded-pill m-2 pill-button">@Product.FirstButtonText</NavLink>
         @if (!string.IsNullOrEmpty(Product.SecondHref) && !string.IsNullOrEmpty(Product.SecondButtonText))
         {
