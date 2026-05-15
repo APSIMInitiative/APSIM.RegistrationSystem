@@ -1,0 +1,35 @@
+services:
+  registration-web-api:
+    build:
+      context: ./RegistrationWebAPI
+      dockerfile: Dockerfile
+    container_name: apsim-registration-webapi
+    env_file:
+      - ./RegistrationWebAPI/.env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__RegistrationDb: Data Source=/app/data/APSIMRegistrationSystemWebAPI.db
+    ports:
+      - "8088:80"
+    volumes:
+      - registration_api_db:/app/data
+    restart: unless-stopped
+
+  registration-web-app:
+    build:
+      context: ./RegistrationWebApp
+      dockerfile: Dockerfile
+    container_name: apsim-registration-webapp
+    env_file:
+      - ./RegistrationWebApp/.env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      WebApi__BaseUrl: http://registration2.apsim.info
+    ports:
+      - "8089:80"
+    depends_on:
+      - registration-web-api
+    restart: unless-stopped
+
+volumes:
+  registration_api_db:
