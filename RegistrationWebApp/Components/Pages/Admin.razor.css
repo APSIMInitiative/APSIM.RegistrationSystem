@@ -1,5 +1,47 @@
 .licence-col
 {
     background-color: white;
-    border: 10px solid red;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+}
+
+.login-container
+{
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    padding: 3%;
+}
+
+.login-form-div
+{
+    background-color: #fbfdf9;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    padding: 3%;
+}
+
+.user-regos-col, .org-reg-col
+{
+    background-color: #fbfdf9;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    padding: 3%;
+}
+
+.member-org-row
+{
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    padding: 3%;
+}
+
+.add-member-col, .existing-member-col
+{
+    background-color: #fbfdf9;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    padding: 3%;
 }
