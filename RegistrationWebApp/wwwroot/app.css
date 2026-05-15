@@ -66,11 +66,13 @@ h1:focus {
 
 .pill-button
 {
+    padding: 2%;
     box-shadow: 0 8px 20px rgba(47, 143, 47, 0.25);
 }
 
 .pill-button-primary
 {
+    padding: 2%;
     box-shadow: 0 8px 20px rgba(47, 100, 143, 0.25);
 }
 
