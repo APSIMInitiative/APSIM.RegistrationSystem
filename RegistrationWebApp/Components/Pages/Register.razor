@@ -28,7 +28,7 @@
                     Description=@GeneralDotPoints
                     MainButtonText="Register for General Use Licence"
                     BodyButtonLink="https://www.apsim.info/registration/general-use-licence/"
-                    BodyButtonText="Full Licence details"
+                    BodyButtonText="General Use Licence details"
                 />
             </div>
             <div class="col-lg-4 col-md-6">
@@ -37,7 +37,7 @@
                     Description=@SpecialDotPoints
                     MainButtonText="Register for Special Use Licence"
                     BodyButtonLink="https://www.apsim.info/download-apsim/"
-                    BodyButtonText="Full Licence details"
+                    BodyButtonText="Special Use Licence details"
                 />
             </div>
         </div>
@@ -181,19 +181,11 @@
                         @UserLicenceStatus.General.GetDescription()
                     </option>
                 </InputSelect>
-                <label class="form-label mb-2">Optionally register with an organisation</label>
-                <InputSelect class="form-control mb-2" @bind-Value="generalUseRegistration!.OrganisationId">
-                    <option value="" selected>*-- Optionally register with an organisation --</option>
-                    @foreach (var organisation in organisations)
-                    {
-                        <option value="@organisation.Id">@organisation.Name</option>
-                    }
-                </InputSelect>
-                <label class="form-check-label mb-2" >I have read and agree to the General Use licence terms</label>
                 <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
             </div>
             <Row CustomRowClasses="text-center">
                 <Col>
+                    <label class="form-check-label mb-2" >By pressing the below button you agree that you have read and agree to the General Use licence terms</label>
                     <button type="submit" class="btn btn-success">Submit Application</button>
                 </Col>
             </Row>
@@ -224,8 +216,7 @@
     }
 
     private MarkupString StepOneDescription => new MarkupString("<p>This means you are intending to use " +
-    "APSIM in a commercial setting, such as for profit or business purposes.</p>" +
-    "<p><strong>(Users who intend to register against APSIM Initiative Member Organisation or Special Use Licence should also click 'No' )</strong></p>");
+    "APSIM in a commercial setting, such as for profit or business purposes.</p>");
 
     private MarkupString StepTwoDescription => new MarkupString("<p>This means you will only use installed versions of APSIM and not make any modifications to the source code.</p>");
 
