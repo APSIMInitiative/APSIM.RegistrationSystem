@@ -250,6 +250,8 @@
             "Invalid licence pathway.Member organisations must have the 'APSIM Initiative Member' licence pathway.");
             return;
         }
+        List<string>emailsWildCard = new List<string>{ $"*@{MemberOrganisation.ContactEmail.Split('@').Last()}" };
+        MemberOrganisation.Emails = emailsWildCard;
         HttpResponseMessage response = await WebApiUtility.AddOrganisationAsync(MemberOrganisation);
         if (response.IsSuccessStatusCode)
         {
