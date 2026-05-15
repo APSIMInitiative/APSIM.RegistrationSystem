@@ -28,7 +28,6 @@
         </div>
         <EditForm Model="@formdata" OnValidSubmit="() => OnCheckRegistration(formdata.emailInput)" class="text-center m-4 ">
             <div class="mb-3">
-                <label for="emailInput" class="form-label">Email address</label>
                 <input type="email" class="form-control w-75 mx-auto" id="emailInput" placeholder="Enter your email" @bind-value="formdata.emailInput" required>
             </div>
             <button type="submit" class="btn btn-primary rounded-pill pill-button-primary">Check registration status</button>
