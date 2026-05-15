@@ -109,12 +109,12 @@
 @* // Special Use Registration Form *@
 <div class="register-row row mt-4" hidden="@(!isSpecialUseRegistrationVisible)">
     <div class="col text-center">
-        <h2 class="text-center">Special Use Registration</h2>
-        <div class="alert alert-info " role="alert">
-            <p>Based on your selections a licence pathway has been selected for you.</p>
-        </div>
         <div class="special-use-licence-choice-row row mt-4">
-            <div class="col-md-6 offset-md-3 mb-4">
+            <div class="special-use-col col-md-6 offset-md-3 mb-4">
+                <h2 class="text-center">Special Use Registration</h2>
+                <div class="alert alert-info " role="alert">
+                    <p>Based on your selections a licence pathway has been selected for you.</p>
+                </div>
                 <EditForm Model="@organisation" OnValidSubmit="() => SubmitOrganisationApplication(organisation)" FormName="specialUseRegistrationForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
@@ -151,13 +151,15 @@
                         <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="organisation!.LicenceStatus">
                             <option value="@OrganisationLicenceStatus.Pending" selected disabled>@OrganisationLicenceStatus.Pending.GetDescription()</option>
                         </InputSelect >
-                        <label class="form-check-label mb-2">By clicking submit I have read and agree to the Special Use licence terms. 
-                            Please note that final licence classification is confirmed by the APSIM Initiative.
-                        </label>
+
                         <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
                     </div>
-                    <div class="row text-center">
-                        <button type="submit" class="btn btn-success">Submit Application</button>
+                    <p class="mb-2">By clicking submit I have read and agree to the Special Use licence terms.</p>
+                    <p>
+                        <em>Please note that final licence classification is confirmed by the APSIM Initiative.</em>
+                    </p>
+                    <div class="row w-25 mx-auto text-center">
+                        <button type="submit" class="btn btn-success pill-button rounded-pill">Submit Application</button>
                     </div>
                 </EditForm>
             </div>
@@ -167,7 +169,7 @@
 
 
 <div class="general-registration-form-row row " hidden="@(!isGeneralUseRegistrationVisible)">
-    <div class="col-md-6 offset-md-3 mt-5 mb-5 p-4 border border-success rounded">
+    <div class="general-use-col col col-md-6 offset-md-3 mt-5 mb-5">
         <h2 class="text-center">General Use Registration</h2>
         <EditForm Model="@generalUseRegistration" OnValidSubmit="() => SubmitUserApplication(generalUseRegistration)" FormName="generalUseRegistrationForm">
             <DataAnnotationsValidator />
@@ -184,9 +186,9 @@
                 <PdfViewer PdfUrl="/Documents/APSIM_General_Use_Licence.pdf"/>
             </div>
             <Row CustomRowClasses="text-center">
-                <Col>
-                    <label class="form-check-label mb-2" >By pressing the below button you agree that you have read and agree to the General Use licence terms</label>
-                    <button type="submit" class="btn btn-success">Submit Application</button>
+                <p> By clicking submit I have read and agree to the General Use licence terms.</p>
+                <Col CustomColClasses="w-25 mx-auto">
+                    <button type="submit" class="btn btn-success pill-button rounded-pill">Submit Application</button>
                 </Col>
             </Row>
         </EditForm>
