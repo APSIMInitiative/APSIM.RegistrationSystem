@@ -282,6 +282,27 @@ public partial class WebApiUtility
         return response;
     }
 
+    /// <summary>
+    /// Updates an existing organisation by sending a PUT request to the web API.
+    /// </summary>
+    /// <param name="organisation">The organisation object containing updated values.</param>
+    /// <returns>The HTTP response message from the API.</returns>
+    public async Task<HttpResponseMessage> UpdateOrganisationAsync(Organisation organisation)
+    {
+        if (organisation.Id == Guid.Empty)
+        {
+            throw new ArgumentException("Organisation Id is required for updates.", nameof(organisation));
+        }
+
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        string body = JsonSerializer.Serialize(organisation);
+        string endpoint = GetEndpointUrl($"{OrganisationsEndpoint}/{organisation.Id}");
+        HttpResponseMessage response = await _client.PutAsync(endpoint,
+            new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+        return response;
+    }
+
 
 
     /// <summary>

@@ -38,9 +38,17 @@
     padding: 3%;
 }
 
-.add-member-col, .existing-member-col
+.member-org-panel
 {
     background-color: #fbfdf9;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    padding: 3%;
+}
+
+.manage-special-org-row
+{
+    background-color: #ffffff;
     border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
     padding: 3%;
