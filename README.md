@@ -70,6 +70,38 @@ This starts the configured task that runs the web app in watch mode from the `Re
 dotnet test Tests/Tests.csproj
 ```
 
+## Docker
+
+You can run the API and web app locally with Docker or Docker Compose.
+
+### Build Images
+
+From the repository root:
+
+```bash
+docker build -f RegistrationWebAPI/Dockerfile -t apsim-registration-webapi .
+docker build -f RegistrationWebApp/Dockerfile -t apsim-registration-webapp .
+```
+
+### Run With Docker Compose
+
+Start both services together:
+
+```bash
+docker compose up -d --build
+```
+
+This starts:
+
+- Web API at http://localhost:8088
+- Web App at http://localhost:8089
+
+### Stop Docker Compose
+
+```bash
+docker compose down
+```
+
 ## Project Documentation
 
 For project-specific configuration, troubleshooting, and development details, see each project README linked above.
