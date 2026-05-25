@@ -8,6 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  ORGANIZATION: apsiminitiative
 
 jobs:
   publish:
@@ -39,7 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ toLower(github.repository_owner) }}/${{ matrix.image_name }}
+          images: ${{ env.REGISTRY }}/${{ env.ORGANIZATION }}/${{ matrix.image_name }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short
