@@ -222,6 +222,17 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithTags("Health")
     .Produces(StatusCodes.Status200OK);
 
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "APSIM Registration API",
+    status = "ok",
+    health = "/health",
+    swagger = "/swagger"
+}))
+    .WithName("GetRoot")
+    .WithTags("Health")
+    .Produces(StatusCodes.Status200OK);
+
 app.MapGet("/api/downloads/link", async (string email, RegistrationDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(downloadBaseUrl))

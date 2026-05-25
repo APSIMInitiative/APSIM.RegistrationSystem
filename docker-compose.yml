@@ -1,8 +1,7 @@
 services:
   registration-web-api:
     build:
-      context: ./RegistrationWebAPI
-      dockerfile: Dockerfile
+      dockerfile: RegistrationWebAPI/Dockerfile
     container_name: apsim-registration-webapi
     env_file:
       - ./RegistrationWebAPI/.env
@@ -17,14 +16,13 @@ services:
 
   registration-web-app:
     build:
-      context: ./RegistrationWebApp
-      dockerfile: Dockerfile
+      dockerfile: RegistrationWebApp/Dockerfile
     container_name: apsim-registration-webapp
     env_file:
       - ./RegistrationWebApp/.env
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      WebApi__BaseUrl: http://registration2.apsim.info
+      WebApi__BaseUrl: http://registration-web-api/
     ports:
       - "8089:80"
     depends_on:

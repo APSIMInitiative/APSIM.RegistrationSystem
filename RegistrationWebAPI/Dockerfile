@@ -1,14 +1,11 @@
 # Use the official .NET SDK image to build and publish the application
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-WORKDIR /app
-
-# Copy the project files and restore dependencies
-COPY *.csproj ./
-RUN dotnet restore
+WORKDIR /src
 
 # Copy the rest of the application files and publish the application
-COPY . ./
-RUN dotnet publish -c Release -o /out
+COPY ./RegistrationWebAPI ./RegistrationWebAPI
+COPY ./RegistrationShared ./RegistrationShared
+RUN dotnet publish RegistrationWebAPI/RegistrationWebAPI.csproj -c Release -o /out
 
 # Use the official .NET runtime image to run the application
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
