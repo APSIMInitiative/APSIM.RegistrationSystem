@@ -60,7 +60,6 @@
                             </thead>
                             <tbody>
                                 @foreach (User registration in users.
-                                    Where(r => r.LicenceStatus == UserLicenceStatus.General).
                                     OrderByDescending(r => r.DateCreated))
                                 {
                                     <tr>
