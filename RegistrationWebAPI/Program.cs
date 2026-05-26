@@ -765,7 +765,7 @@ static async Task<IResult?> ValidateUserAsync(User user, RegistrationDbContext d
         return Results.Conflict("A user with the same email already exists.");
     }
 
-    if (user.OrganisationId != Guid.Empty)
+    if (user.OrganisationId.HasValue)
     {
         var organisationExists = await db.Organisations.AnyAsync(x => x.Id == user.OrganisationId);
         if (!organisationExists)

@@ -38,7 +38,7 @@ public class UserEntity
     /// The unique identifier of the organisation the user belongs to.
     /// This is an optional field and can be left empty.
     /// </summary>
-    public Guid OrganisationId { get; set; }
+    public Guid? OrganisationId { get; set; }
 
     /// <summary>
     /// Navigation property to the organisation the user belongs to.

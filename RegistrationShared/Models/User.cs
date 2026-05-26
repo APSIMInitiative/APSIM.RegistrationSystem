@@ -39,7 +39,7 @@ public class User
     /// The unique identifier of the organisation the user belongs to.
     /// This is an optional field and can be left empty.
     /// </summary>
-    public Guid OrganisationId { get; set; }
+    public Guid? OrganisationId { get; set; }
 
     /// <summary>
     /// Returns a string representation of the User object, including the email, organisation, licence status, and date created.
