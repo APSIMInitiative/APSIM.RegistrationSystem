@@ -119,15 +119,16 @@
                     <DataAnnotationsValidator />
                     <ValidationSummary />
                     <div class="row mb-3">
-                        <InputText class="form-control mb-2" Placeholder="*Email" @bind-Value="organisation!.ContactEmail" />
+                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Email" @bind-Value="organisation!.ContactEmail" />
                         <ValidationMessage For="@(() => organisation.ContactEmail)" />
-                        <InputText class="form-control mb-2" Placeholder="*Contact Name" @bind-Value="organisation!.ContactName" />
+                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Name" @bind-Value="organisation!.ContactName" />
                         <ValidationMessage For="@(() => organisation.ContactName)" />
+                        <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="organisation!.ContactPhone" />
+                        <ValidationMessage For="@(() => organisation.ContactPhone)" />
                         <InputText class="form-control mb-2" Placeholder="*Organisation Name" @bind-Value="organisation!.Name" />
                         <ValidationMessage For="@(() => organisation.Name)" />
                         <InputText class="form-control mb-2" Placeholder="*Organisation Address" @bind-Value="organisation!.ContactAddress" />
                         <ValidationMessage For="@(() => organisation.ContactAddress)" />
-                        <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="organisation!.ContactPhone" />
                         <InputSelect class="form-control mb-2" @bind-Value="organisation!.LicencePathway">
                             <option value=""disabled>-- Select Licence Pathway --</option>
                             @if (SpecialUseStep <= 3)
