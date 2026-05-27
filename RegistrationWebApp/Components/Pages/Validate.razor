@@ -1,0 +1,237 @@
+
+
+@namespace RegistrationWebApp.Components.Pages
+@page "/validate"
+@using RegistrationShared.Models
+@using RegistrationShared.Enums
+@using RegistrationWebApp.Components.Layout.CustomLayout
+@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+@using RegistrationWebApp.Components.Utilities
+@using RegistrationWebApp.Components.Utilities.Models
+@using Microsoft.AspNetCore.WebUtilities
+@using System.ComponentModel.DataAnnotations
+@implements IDisposable
+@inject ILogger<Validate> Logger
+@inject WebApiUtility WebApiUtility
+@inject DownloadAccessState DownloadAccessState
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+
+
+<PageTitle>Email Verification</PageTitle>
+
+<Row>
+    <div class="col email col-lg-6 offset-lg-3 col-md-8 offset-md-2">
+        <h2 class="text-center m-3">Email Verification</h2>
+        <div class="alert alert-info w-75 mx-auto text-center" role="alert">
+            <p>To verify your email, a link will be sent to your inbox. </p>
+            <p>Please click the link within the email to confirm your registration and access the download page.</p>
+            
+        </div>
+        <div class="alert alert-info w-75 mx-auto text-center" role="alert">
+            <p><strong>If you are a new user</strong>, a new account will be created for you.</p>
+        </div>
+        
+        <EditForm Model="@formdata" OnValidSubmit="() => OnCheckRegistration(formdata.emailInput)" class="text-center m-4 ">
+            <div class="mb-3">
+                <input type="email"
+                       class="form-control w-75 mx-auto"
+                       id="emailInput"
+                       placeholder="Enter your email"
+                       @bind="formdata.emailInput"
+                       @bind:event="oninput"
+                       @bind:after="OnEmailInputChanged"
+                       required>
+                <InputCheckbox class="form-check-input mt-3" type="checkbox" id="licenceAccepted" @bind-Value="formdata.LicenceAccepted" />
+                <label class="form-check-label mt-3" for="licenceAccepted">I have read and accept the licence terms</label>
+            </div>
+            <button type="submit" class="btn btn-primary rounded-pill pill-button-primary">Verify Email</button>
+        </EditForm>
+
+        <div class="pdf-div mt-4 mb-4 p-4" hidden="@(GeneralHiddenState ? "hidden" : null)">
+            <h2 class="text-center">Licence Details</h2>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <iframe src="/Documents/APSIM_General_Use_Licence.pdf" width="100%" height="500"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <div class="pdf-div mt-4 mb-4 p-4" hidden="@(SpecialHiddenState ? "hidden" : null)">
+            <h2 class="text-center">Licence Details</h2>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <iframe src="/Documents/APSIM_Special_Use_Licence.pdf" width="100%" height="500"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</Row>
+
+<CustomModal Title="@modalTitle" @bind-IsOpen="showModal">
+    <p>@modalMessage</p>
+</CustomModal>
+
+@code
+{
+    private bool showModal = false;
+    private string modalMessage = string.Empty;
+    private string modalTitle = string.Empty;
+    private FormData formdata = new FormData();
+    private bool GeneralHiddenState { get; set; } = true;
+    private bool SpecialHiddenState { get; set; } = true;
+    private CancellationTokenSource? pollingCancellationTokenSource;
+
+    /// <summary>
+    /// This class represents the form data for the email input in 
+    /// the existing user registration check.
+    /// </summary>
+    private class FormData
+    {
+        [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+        public string emailInput { get; set; } = string.Empty;
+
+        public bool LicenceAccepted { get; set; } = false;
+    }
+
+    /// <summary>
+    /// This property holds the message to be displayed in the modal after 
+    /// checking the user's registration status. 
+    /// It is updated based on the result of the registration check and is 
+    /// used to provide feedback to the user about whether their registration was found or not.
+    /// </summary>
+    private string ModalMessage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Sends request to check the user's registration status and displays the result in the modal.
+    /// </summary>
+    private async Task OnCheckRegistration(string emailInput)
+    {
+        Logger.LogInformation("Checking registration status for email: {Email}", emailInput);
+        bool downloadLinkEmailSent = await WebApiUtility.GetDownloadRedirectLinkAsync(emailInput);
+
+        if (!downloadLinkEmailSent)
+        {
+            Logger.LogInformation("No user found for email: {Email}. Registering new user...", emailInput);
+            User newUser = new User
+            {
+                Email = emailInput,
+                DateCreated = DateTime.UtcNow,
+            };
+            UserResponseModel response = await WebApiUtility.CreateUserAsync(newUser);        
+            OpenModal("Registration Complete", response.Message);
+            return;
+        }
+        Logger.LogInformation("Download link email sent to: {Email}", emailInput);
+        OpenModal("Email sent!", $"A download link has been sent to {emailInput}. Please check your inbox.");
+    }
+
+    private async Task OnEmailInputChanged()
+    {
+        string emailInput = formdata.emailInput.Trim();
+        if (!IsValidEmail(emailInput))
+        {
+            pollingCancellationTokenSource?.Cancel();
+            pollingCancellationTokenSource?.Dispose();
+            pollingCancellationTokenSource = null;
+            GeneralHiddenState = true;
+            SpecialHiddenState = true;
+            return;
+        }
+
+        StartPollingForOrganisationMatch(emailInput);
+        await Task.CompletedTask;
+    }
+
+    private void StartPollingForOrganisationMatch(string emailInput)
+    {
+        pollingCancellationTokenSource?.Cancel();
+        pollingCancellationTokenSource?.Dispose();
+        pollingCancellationTokenSource = new CancellationTokenSource();
+
+        GeneralHiddenState = true;
+        SpecialHiddenState = true;
+
+        _ = PollForOrganisationMatchAsync(emailInput.Trim(), pollingCancellationTokenSource.Token);
+    }
+
+    private async Task PollForOrganisationMatchAsync(string emailInput, CancellationToken cancellationToken)
+    {
+        string? emailDomain = GetEmailDomain(emailInput);
+        if (string.IsNullOrWhiteSpace(emailDomain))
+        {
+            return;
+        }
+
+        try
+        {
+            using PeriodicTimer timer = new(TimeSpan.FromSeconds(1));
+
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                List<Organisation> organisations = await WebApiUtility.GetOrganisationsAsync();
+                Organisation? matchingOrganisation = organisations.FirstOrDefault(org => org.IsFromOrganisation(emailInput));
+
+                if (matchingOrganisation is null)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        GeneralHiddenState = false;
+                        SpecialHiddenState = true;
+                        StateHasChanged();
+                    });
+                    return;
+                }
+
+                bool showGeneralUseLicence = matchingOrganisation!.LicencePathway == LicencePathway.APSIMInitiativeMember;
+
+                await InvokeAsync(() =>
+                {
+                    GeneralHiddenState = !showGeneralUseLicence;
+                    SpecialHiddenState = showGeneralUseLicence;
+                    StateHasChanged();
+                });
+
+                return;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed while polling for organisation match for email: {Email}", emailInput);
+        }
+    }
+
+    private static string? GetEmailDomain(string emailInput)
+    {
+        int atIndex = emailInput.IndexOf('@');
+        if (atIndex < 0 || atIndex == emailInput.Length - 1)
+        {
+            return null;
+        }
+
+        return emailInput[(atIndex + 1)..].Trim();
+    }
+
+    private static bool IsValidEmail(string emailInput)
+    {
+        return new EmailAddressAttribute().IsValid(emailInput);
+    }
+
+    private void OpenModal(string title, string message)
+    {
+        modalTitle = title;
+        modalMessage = message;
+        showModal = true;
+    }
+
+    public void Dispose()
+    {
+        pollingCancellationTokenSource?.Cancel();
+        pollingCancellationTokenSource?.Dispose();
+    }
+
+}

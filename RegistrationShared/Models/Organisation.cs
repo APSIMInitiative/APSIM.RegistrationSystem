@@ -108,6 +108,30 @@ public class Organisation
         $"DateCreated: {DateCreated}";
     }
 
+    /// <summary>
+    /// Determines if the provided email address belongs to the organisation by
+    /// checking if it matches any of the email addresses or domains associated 
+    /// with the organisation.
+    /// </summary>
+    /// <param name="email">The email address to check.</param>
+    /// <returns>True if the email belongs to the organisation; otherwise, false.</returns>
+    public bool IsFromOrganisation(string email)
+    {
+        string emailDomain = email.Split('@').LastOrDefault()?.Trim() ?? string.Empty;
+        bool isMatch = false;
+        foreach (string registeredEmail in Emails)
+        {
+            string registeredEmailTrimmed = registeredEmail.Split('@').LastOrDefault()?.Trim() ?? string.Empty;
+            if (string.Equals(registeredEmailTrimmed, email, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(registeredEmailTrimmed, emailDomain, StringComparison.OrdinalIgnoreCase))
+            {
+                isMatch = true;
+                break;
+            }
+        }
+        return isMatch;
+    }
+
 
 
 }
