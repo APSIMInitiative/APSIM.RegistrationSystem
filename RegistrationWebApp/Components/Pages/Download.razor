@@ -73,19 +73,17 @@
                         </div>
 
                         <div class="download-actions col-3 g-3">
-                            
-                            <button type="button" class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(downloadInfo.InfoUrl)">
-                                <span class="os-icon os-icon-github" aria-hidden="true"></span>More Info
-                            </button>
-
-                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkDebian, true)">
-                                <span class="os-icon os-icon-debian" aria-hidden="true"></span>Download for Debian
-                            </button>
                             <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkWindows, true)">
                                 <span class="os-icon os-icon-windows" aria-hidden="true"></span>Download for Windows
                             </button>
                             <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkMacOS, true)">
                                 <span class="os-icon os-icon-macos" aria-hidden="true"></span>Download for MacOS
+                            </button>
+                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkDebian, true)">
+                                <span class="os-icon os-icon-linux" aria-hidden="true"></span>Download for Linux (Debian)
+                            </button>
+                            <button type="button" class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(downloadInfo.InfoUrl)">
+                                <span class="os-icon os-icon-github" aria-hidden="true"></span>More Info
                             </button>
                         </div>
                     </div>
@@ -105,16 +103,15 @@
                         </div>
 
                         <div class="download-actions col-3 g-3">
-                            <button type="button" class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(GetClassicIssueLink(classicInfo.BugID))">
-                                <span class="os-icon os-icon-github" aria-hidden="true"></span>More Info
-                            </button>
-
                             @if (classicInfo.RevisionNumber is int revision)
                             {
                                 <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(APSIMBuildsAPIUtility.GetClassicBuildDownloadLink(revision))">
                                     <span class="os-icon os-icon-windows" aria-hidden="true"></span>Download APSIM Classic
                                 </button>
                             }
+                            <button type="button" class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(GetClassicIssueLink(classicInfo.BugID))">
+                                <span class="os-icon os-icon-github" aria-hidden="true"></span>More Info
+                            </button>
                         </div>
                     </div>
                 }
