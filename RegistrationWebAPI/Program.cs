@@ -34,12 +34,12 @@ builder.Configuration
         ["Branding:LogoUrl"] = Environment.GetEnvironmentVariable("Branding__LogoUrl")
     });
 
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
-var jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is not configured.");
-var jwtExpiryMinutes = int.TryParse(builder.Configuration["Jwt:TokenExpiryMinutes"], out var expiryMinutes) ? expiryMinutes : 60;
-var verificationTokenLifetimeHours = int.TryParse(builder.Configuration["Verification:TokenLifetimeHours"], out var tokenLifetimeHours) ? tokenLifetimeHours : 24;
-var downloadTokenLifetimeHours = int.TryParse(builder.Configuration["Download:TokenLifetimeHours"], out var configuredDownloadTokenLifetimeHours)
+string jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
+string jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
+string jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is not configured.");
+int jwtExpiryMinutes = int.TryParse(builder.Configuration["Jwt:TokenExpiryMinutes"], out var expiryMinutes) ? expiryMinutes : 60;
+int verificationTokenLifetimeHours = int.TryParse(builder.Configuration["Verification:TokenLifetimeHours"], out var tokenLifetimeHours) ? tokenLifetimeHours : 24;
+int downloadTokenLifetimeHours = int.TryParse(builder.Configuration["Download:TokenLifetimeHours"], out var configuredDownloadTokenLifetimeHours)
     ? configuredDownloadTokenLifetimeHours
     : 48;
 if (downloadTokenLifetimeHours <= 0)
@@ -49,16 +49,6 @@ if (downloadTokenLifetimeHours <= 0)
 
 var downloadBaseUrl = builder.Configuration["Download:BaseUrl"] ?? builder.Configuration["Verification:BaseUrl"];
 const string downloadAccessPurposeClaim = "download-access";
-
-static string ResolveTemplateLogoUrl(string? configuredLogoUrl, string? baseUrl)
-{
-    if (!string.IsNullOrWhiteSpace(configuredLogoUrl))
-    {
-        return configuredLogoUrl;
-    }
-
-    return "https://www.apsim.info/wp-content/uploads/2026/05/APSIM_transparent-154x100-1.png";
-}
 
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
@@ -120,26 +110,25 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-var verificationPagePath = Path.Combine(app.Environment.ContentRootPath, "verification.html");
+string verificationPagePath = Path.Combine(app.Environment.ContentRootPath, "verification.html");
 if (!File.Exists(verificationPagePath))
 {
     throw new InvalidOperationException($"Verification page was not found at '{verificationPagePath}'.");
 }
 
-var templateLogoUrl = ResolveTemplateLogoUrl(
+string templateLogoUrl = ResolveTemplateLogoUrl(
     builder.Configuration["Branding:LogoUrl"],
     builder.Configuration["Verification:BaseUrl"] ?? downloadBaseUrl);
 
 /// Load the verification page HTML and replace the placeholder with the configured base URL for verification links.
-var verificationPageHtml = File.ReadAllText(verificationPagePath)
+string verificationPageHtml = File.ReadAllText(verificationPagePath)
     .Replace("{{VerificationBaseUrl}}", builder.Configuration["Verification:BaseUrl"])
     .Replace("{{LogoUrl}}", templateLogoUrl);
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
-    db.Database.EnsureCreated();
+    RegistrationDbContext db = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
     db.Database.Migrate();
 }
 
@@ -158,11 +147,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 MailUtility? mailUtility = null;
-var smtpApiKey = Environment.GetEnvironmentVariable("Smtp__ApiKey");
-if (!string.IsNullOrWhiteSpace(smtpApiKey))
-{
-    mailUtility = new MailUtility(smtpApiKey);
-}
+string smtpApiKey = Environment.GetEnvironmentVariable("Smtp__ApiKey") ?? string.Empty;
+if (string.IsNullOrEmpty(smtpApiKey))
+    throw new Exception("Unable to create MailUtility: SMTP API key is not configured.");
+mailUtility = CreateMailUtility(smtpApiKey);
 
 app.MapPost("/api/auth/token", (AuthTokenRequest request) =>
 {
@@ -288,17 +276,17 @@ app.MapGet("/api/downloads/link", async (string email, RegistrationDbContext db)
 
     var tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
     var downloadPageUrl = new Uri(new Uri(downloadBaseUrl), "download").ToString();
-        var downloadLink = $"{downloadPageUrl}?token={Uri.EscapeDataString(tokenValue)}";
-    
-        if (mailUtility is not null)
-        {
-            await mailUtility.SendDownloadLinkEmailAsync(normalizedEmail, downloadLink);
-            return Results.Ok(new { message = "Download link has been sent to your email address. It expires in 48 hours." });
-        }
-        else
-        {
-            return Results.Problem("Email service is not configured.", statusCode: StatusCodes.Status500InternalServerError);
-        }
+    var downloadLink = $"{downloadPageUrl}?token={Uri.EscapeDataString(tokenValue)}";
+
+    if (mailUtility is not null)
+    {
+        await mailUtility.SendDownloadLinkEmailAsync(normalizedEmail, downloadLink);
+        return Results.Ok(new { message = "Download link has been sent to your email address. It expires in 48 hours." });
+    }
+    else
+    {
+        return Results.Problem("Email service is not configured.", statusCode: StatusCodes.Status500InternalServerError);
+    }
 })
     .AllowAnonymous()
     .WithName("CreateDownloadAccessLink")
@@ -678,6 +666,21 @@ organisations.MapGet("/verify", async (string token, RegistrationDbContext db) =
 
 app.Run();
 
+
+static string ResolveTemplateLogoUrl(string? configuredLogoUrl, string? baseUrl)
+{
+    if (!string.IsNullOrWhiteSpace(configuredLogoUrl))
+    {
+        return configuredLogoUrl;
+    }
+
+    return "https://www.apsim.info/wp-content/uploads/2026/05/APSIM_transparent-154x100-1.png";
+}
+
+/// <summary>
+/// Maps a UserEntity from the database to a User model used in API responses.
+/// </summary> <param name="entity">The UserEntity to map.</param>
+/// <returns>A User model with properties copied from the entity.</returns> 
 static User ToUserModel(UserEntity entity) =>
     new()
     {
@@ -837,6 +840,18 @@ static async Task<IResult?> ValidateOrganisationAsync(Organisation organisation,
     }
 
     return null;
+
+
+}
+
+static MailUtility CreateMailUtility(string smtpApiKey)
+{
+    if (!string.IsNullOrWhiteSpace(smtpApiKey))
+    {
+        MailUtility newMailUtility = new(smtpApiKey);
+        return newMailUtility;
+    }
+    throw new Exception("Unable to create MailUtility: SMTP API key is not configured.");
 }
 
 /// <summary>Marker type used by WebApplicationFactory to locate the RegistrationWebAPI entry point.</summary>
