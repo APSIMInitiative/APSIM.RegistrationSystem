@@ -73,13 +73,13 @@
                         </div>
 
                         <div class="download-actions col-3 g-3">
-                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkWindows, true)">
+                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkWindows, "windows")'>
                                 <span class="os-icon os-icon-windows" aria-hidden="true"></span>Download for Windows
                             </button>
-                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkMacOS, true)">
+                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkMacOS, "macos")'>
                                 <span class="os-icon os-icon-macos" aria-hidden="true"></span>Download for MacOS
                             </button>
-                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => NavigationManager.NavigateTo(downloadInfo.DownloadLinkDebian, true)">
+                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkDebian, "linux-debian")'>
                                 <span class="os-icon os-icon-linux" aria-hidden="true"></span>Download for Linux (Debian)
                             </button>
                             <button type="button" class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(downloadInfo.InfoUrl)">
@@ -105,7 +105,7 @@
                         <div class="download-actions col-3 g-3">
                             @if (classicInfo.RevisionNumber is int revision)
                             {
-                                <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(APSIMBuildsAPIUtility.GetClassicBuildDownloadLink(revision))">
+                                <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OnClassicDownloadClicked(classicInfo, revision)">
                                     <span class="os-icon os-icon-windows" aria-hidden="true"></span>Download APSIM Classic
                                 </button>
                             }
@@ -138,6 +138,7 @@
     private bool isTokenValidationInProgress = true;
     private bool isSelectionLoading;
     private string selectedDownloadType = "nextgen";
+    private string? accessToken;
 
     private List<APSIMClassicDownloadInfo> ClassicDownloadInfos { get; set; } = new List<APSIMClassicDownloadInfo>();
     private List<APSIMNextGenDownloadInfo> NextGenDownloadInfos { get; set; } = new List<APSIMNextGenDownloadInfo>();
@@ -169,6 +170,8 @@
                 hasValidToken = false;
                 return;
             }
+
+            accessToken = token;
 
             var tokenValidationResponse = await WebApiUtility.ValidateDownloadTokenAsync(token);
             hasValidToken = tokenValidationResponse?.IsValid == true;
@@ -267,6 +270,64 @@
         }
 
         await JS.InvokeVoidAsync("open", url, "_blank", "noopener,noreferrer");
+    }
+
+    private async Task OnNextGenDownloadClicked(APSIMNextGenDownloadInfo downloadInfo, string? downloadUrl, string platform)
+    {
+        if (string.IsNullOrWhiteSpace(downloadUrl))
+        {
+            return;
+        }
+
+        var version = string.IsNullOrWhiteSpace(downloadInfo.Version)
+            ? $"Revision {downloadInfo.Revision}"
+            : downloadInfo.Version;
+
+        await TrackDownloadEventAsync("nextgen", version, platform, downloadUrl);
+        NavigationManager.NavigateTo(downloadUrl, true);
+    }
+
+    private async Task OnClassicDownloadClicked(APSIMClassicDownloadInfo classicInfo, int revision)
+    {
+        var downloadUrl = APSIMBuildsAPIUtility.GetClassicBuildDownloadLink(revision);
+        await TrackDownloadEventAsync("classic", $"Revision {revision}", "windows", downloadUrl);
+        await OpenInNewTab(downloadUrl);
+    }
+
+    private async Task TrackDownloadEventAsync(string downloadType, string version, string platform, string downloadUrl)
+    {
+        var token = accessToken;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            token = DownloadAccessState.GetToken();
+        }
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Logger.LogWarning("Unable to record download event because access token was unavailable.");
+            return;
+        }
+
+        try
+        {
+            var tracked = await WebApiUtility.RecordDownloadEventAsync(new DownloadEventRequest
+            {
+                Token = token,
+                DownloadType = downloadType,
+                Version = version,
+                Platform = platform,
+                DownloadUrl = downloadUrl
+            });
+
+            if (!tracked)
+            {
+                Logger.LogWarning("Download event tracking request was not successful for {DownloadType} {Version}.", downloadType, version);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to record download event for {DownloadType} {Version}.", downloadType, version);
+        }
     }
 
 

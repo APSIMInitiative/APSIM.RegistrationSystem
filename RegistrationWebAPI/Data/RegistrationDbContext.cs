@@ -9,6 +9,8 @@ public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> optio
 
     public DbSet<OrganisationEntity> Organisations => Set<OrganisationEntity>();
 
+    public DbSet<DownloadAuditEntity> DownloadAudits => Set<DownloadAuditEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<UserEntity>(entity =>
@@ -29,6 +31,16 @@ public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> optio
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired();
             entity.HasIndex(e => e.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<DownloadAuditEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserEmail).IsRequired();
+            entity.Property(e => e.DownloadType).IsRequired();
+            entity.Property(e => e.Version).IsRequired();
+            entity.HasIndex(e => e.DownloadedAtUtc);
+            entity.HasIndex(e => e.UserEmail);
         });
     }
 }

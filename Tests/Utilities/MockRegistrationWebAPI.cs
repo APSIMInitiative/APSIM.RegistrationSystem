@@ -30,6 +30,7 @@ public sealed class MockRegistrationWebAPI : WebApplicationFactory<RegistrationW
 		SetEnvironmentVariable("Jwt__SigningKey", "registration-tests-signing-key-1234567890");
 		SetEnvironmentVariable("Jwt__TokenExpiryMinutes", "60");
 		SetEnvironmentVariable("ConnectionStrings__RegistrationDb", "Data Source=registration-tests");
+		SetEnvironmentVariable("Smtp__ApiKey", "test-smtp-api-key");
 		connection.Open();
 	}
 
@@ -96,6 +97,15 @@ public sealed class MockRegistrationWebAPI : WebApplicationFactory<RegistrationW
 		var dbContext = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
 
 		dbContext.Organisations.Add(entity);
+		await dbContext.SaveChangesAsync();
+	}
+
+	public async Task SeedDownloadAuditAsync(DownloadAuditEntity entity)
+	{
+		using var scope = Services.CreateScope();
+		var dbContext = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
+
+		dbContext.DownloadAudits.Add(entity);
 		await dbContext.SaveChangesAsync();
 	}
 

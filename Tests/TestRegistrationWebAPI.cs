@@ -1,11 +1,16 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using RegistrationShared.Enums;
 using RegistrationShared.Models;
 using RegistrationWebAPI.Data;
+using RegistrationWebAPI.Models;
+using System.Security.Claims;
+using System.Text;
 using Tests.Utilities;
 
 namespace Tests.RegistrationWebAPI;
@@ -395,5 +400,194 @@ public sealed class TestRegistrationWebAPI : IAsyncLifetime
         var anonClient = mockApi.CreateUnauthenticatedClient();
         var response = await anonClient.GetAsync("/api/users");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RecordDownloadEvent_ReturnsOk_AndPersistsEvent()
+    {
+        const string email = "download-user@example.com";
+        await mockApi.SeedUserAsync(new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            LicenceStatus = UserLicenceStatus.General,
+            DateCreated = DateTime.UtcNow
+        });
+
+        var request = new DownloadEventRequest
+        {
+            Token = CreateDownloadAccessToken(email),
+            DownloadType = "nextgen",
+            Version = "2026.05.1234",
+            Platform = "windows",
+            DownloadUrl = "https://builds.apsim.info/example"
+        };
+
+        var response = await client.PostAsJsonAsync("/api/downloads/events", request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var scope = mockApi.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
+        var audit = await db.DownloadAudits.FirstOrDefaultAsync();
+        Assert.NotNull(audit);
+        Assert.Equal(email, audit.UserEmail);
+        Assert.Equal("nextgen", audit.DownloadType);
+        Assert.Equal("2026.05.1234", audit.Version);
+        Assert.Equal("windows", audit.Platform);
+    }
+
+    [Fact]
+    public async Task RecordDownloadEvent_ReturnsBadRequest_WhenDownloadTypeInvalid()
+    {
+        var request = new DownloadEventRequest
+        {
+            Token = CreateDownloadAccessToken("invalid-type@example.com"),
+            DownloadType = "legacy",
+            Version = "1.0.0"
+        };
+
+        var response = await client.PostAsJsonAsync("/api/downloads/events", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListDownloadEvents_ReturnsFilteredEvents_ForAuthenticatedCaller()
+    {
+        var oldEventTime = DateTime.UtcNow.AddDays(-2);
+        var newEventTime = DateTime.UtcNow.AddMinutes(-30);
+
+        await mockApi.SeedDownloadAuditAsync(new DownloadAuditEntity
+        {
+            Id = Guid.NewGuid(),
+            DownloadedAtUtc = oldEventTime,
+            UserEmail = "classic-user@example.com",
+            DownloadType = "classic",
+            Version = "Revision 123",
+            Platform = "windows"
+        });
+
+        await mockApi.SeedDownloadAuditAsync(new DownloadAuditEntity
+        {
+            Id = Guid.NewGuid(),
+            DownloadedAtUtc = newEventTime,
+            UserEmail = "nextgen-user@example.com",
+            DownloadType = "nextgen",
+            Version = "2026.05.999",
+            Platform = "linux-debian"
+        });
+
+        var filterFrom = DateTime.UtcNow.AddHours(-1).ToString("O");
+        var response = await client.GetAsync($"/api/downloads/events?downloadType=nextgen&fromUtc={Uri.EscapeDataString(filterFrom)}");
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<DownloadAuditListResponse>();
+        Assert.NotNull(payload);
+        Assert.Single(payload.Items);
+        Assert.Equal("nextgen", payload.Items[0].DownloadType);
+        Assert.Equal("nextgen-user@example.com", payload.Items[0].UserEmail);
+    }
+
+    [Fact]
+    public async Task ListDownloadEvents_Returns401_WhenUnauthenticated()
+    {
+        var anonClient = mockApi.CreateUnauthenticatedClient();
+        var response = await anonClient.GetAsync("/api/downloads/events");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListDownloadEvents_ReturnsBadRequest_WhenDownloadTypeInvalid()
+    {
+        var response = await client.GetAsync("/api/downloads/events?downloadType=legacy");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportDownloadEventsCsv_ReturnsFilteredCsv_ForAuthenticatedCaller()
+    {
+        await mockApi.SeedDownloadAuditAsync(new DownloadAuditEntity
+        {
+            Id = Guid.NewGuid(),
+            DownloadedAtUtc = DateTime.UtcNow.AddHours(-4),
+            UserEmail = "classic-user@example.com",
+            DownloadType = "classic",
+            Version = "Revision 111",
+            Platform = "windows",
+            DownloadUrl = "https://builds.apsim.info/old/111"
+        });
+
+        await mockApi.SeedDownloadAuditAsync(new DownloadAuditEntity
+        {
+            Id = Guid.NewGuid(),
+            DownloadedAtUtc = DateTime.UtcNow.AddMinutes(-10),
+            UserEmail = "nextgen-user@example.com",
+            DownloadType = "nextgen",
+            Version = "2026.05.2000",
+            Platform = "linux-debian",
+            DownloadUrl = "https://builds.apsim.info/next/2000"
+        });
+
+        var response = await client.GetAsync("/api/downloads/events/export?downloadType=nextgen");
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/csv", response.Content.Headers.ContentType?.MediaType);
+
+        var csv = await response.Content.ReadAsStringAsync();
+        var lines = csv.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries);
+        Assert.True(lines.Length >= 2);
+        Assert.Equal("DownloadedAtUtc,UserEmail,UserId,DownloadType,Version,Platform,DownloadUrl", lines[0]);
+        Assert.Contains("nextgen-user@example.com", lines[1], StringComparison.Ordinal);
+        Assert.DoesNotContain("classic-user@example.com", csv, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExportDownloadEventsCsv_Returns401_WhenUnauthenticated()
+    {
+        var anonClient = mockApi.CreateUnauthenticatedClient();
+        var response = await anonClient.GetAsync("/api/downloads/events/export");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportDownloadEventsCsv_ReturnsBadRequest_WhenDownloadTypeInvalid()
+    {
+        var response = await client.GetAsync("/api/downloads/events/export?downloadType=legacy");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    private static string CreateDownloadAccessToken(string email)
+    {
+        const string issuer = "registration-tests";
+        const string audience = "registration-tests";
+        const string signingKey = "registration-tests-signing-key-1234567890";
+
+        var now = DateTime.UtcNow;
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims:
+            [
+                new Claim(JwtRegisteredClaimNames.Sub, email),
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim("purpose", "download-access"),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            ],
+            notBefore: now,
+            expires: now.AddMinutes(30),
+            signingCredentials: new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+                SecurityAlgorithms.HmacSha256));
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private sealed class DownloadAuditListResponse
+    {
+        public int Total { get; set; }
+
+        public int Skip { get; set; }
+
+        public int Take { get; set; }
+
+        public List<DownloadAuditResponse> Items { get; set; } = new();
     }
 }

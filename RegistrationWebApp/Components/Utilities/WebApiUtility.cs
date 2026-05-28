@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using RegistrationShared.Models;
 using System.Net;
 using RegistrationShared.Enums;
+using System.Globalization;
 
 namespace RegistrationWebApp.Components.Utilities;
 
@@ -26,6 +27,8 @@ public partial class WebApiUtility
     private const string OrganisationsEndpoint = "api/organisations";
     private const string DownloadLinkEndpoint = "api/downloads/link";
     private const string DownloadTokenValidationEndpoint = "api/downloads/validate";
+    private const string DownloadEventEndpoint = "api/downloads/events";
+    private const string DownloadEventExportEndpoint = "api/downloads/events/export";
 
     /// <summary>The name of the environment variable that can be used to 
     /// override the web API base URL configured in appsettings.json.</summary>
@@ -207,6 +210,17 @@ public partial class WebApiUtility
         return new UserResponseModel { Message = "Registration successful.", User = newUser };
     }
 
+    /// <summary>
+    /// Deletes a user by id by sending a DELETE request to the web API.
+    /// </summary>
+    /// <param name="userId">The id of the user to delete.</param>
+    public async Task<HttpResponseMessage> DeleteUserAsync(Guid userId)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        return await _client.DeleteAsync(GetEndpointUrl($"{UsersEndpoint}/{userId}"));
+    }
+
 
     /// <summary>
     /// Checks whether a user with the given email exists in the system.
@@ -261,6 +275,142 @@ public partial class WebApiUtility
             return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Records a download event for auditing via the web API.
+    /// </summary>
+    public async Task<bool> RecordDownloadEventAsync(DownloadEventRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token) ||
+            string.IsNullOrWhiteSpace(request.DownloadType) ||
+            string.IsNullOrWhiteSpace(request.Version))
+        {
+            return false;
+        }
+
+        string endpoint = GetEndpointUrl(DownloadEventEndpoint);
+        string body = JsonSerializer.Serialize(request);
+
+        HttpResponseMessage response = await _client.PostAsync(endpoint,
+            new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+
+        return response.IsSuccessStatusCode;
+    }
+
+    /// <summary>
+    /// Gets download event rows from the API with optional filtering and paging.
+    /// </summary>
+    public async Task<DownloadAuditListResponse?> GetDownloadEventsAsync(
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        string? email = null,
+        string? downloadType = null,
+        int skip = 0,
+        int take = 100)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+
+        string queryString = BuildDownloadEventsQueryString(fromUtc, toUtc, email, downloadType, skip, take);
+        string endpoint = GetEndpointUrl($"{DownloadEventEndpoint}{queryString}");
+        HttpResponseMessage response = await _client.GetAsync(endpoint);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        string content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<DownloadAuditListResponse>(content, JsonOptions);
+    }
+
+    /// <summary>
+    /// Gets only the total number of download events matching a filter.
+    /// </summary>
+    public async Task<int> GetDownloadEventsCountAsync(
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        string? email = null,
+        string? downloadType = null)
+    {
+        var response = await GetDownloadEventsAsync(fromUtc, toUtc, email, downloadType, skip: 0, take: 1);
+        return response?.Total ?? 0;
+    }
+
+    /// <summary>
+    /// Exports filtered download events as CSV.
+    /// </summary>
+    public async Task<DownloadCsvExportResult?> ExportDownloadEventsCsvAsync(
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        string? email = null,
+        string? downloadType = null)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+
+        string queryString = BuildDownloadEventsQueryString(fromUtc, toUtc, email, downloadType);
+        string endpoint = GetEndpointUrl($"{DownloadEventExportEndpoint}{queryString}");
+        HttpResponseMessage response = await _client.GetAsync(endpoint);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        byte[] bytes = await response.Content.ReadAsByteArrayAsync();
+        string fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+            ?? response.Content.Headers.ContentDisposition?.FileName
+            ?? $"download-events-{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+
+        return new DownloadCsvExportResult
+        {
+            FileName = fileName.Trim('"'),
+            ContentType = response.Content.Headers.ContentType?.MediaType ?? "text/csv",
+            Bytes = bytes
+        };
+    }
+
+    private static string BuildDownloadEventsQueryString(
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? email,
+        string? downloadType,
+        int? skip = null,
+        int? take = null)
+    {
+        var queryParts = new List<string>();
+
+        if (fromUtc.HasValue)
+        {
+            queryParts.Add($"fromUtc={Uri.EscapeDataString(fromUtc.Value.ToString("O", CultureInfo.InvariantCulture))}");
+        }
+
+        if (toUtc.HasValue)
+        {
+            queryParts.Add($"toUtc={Uri.EscapeDataString(toUtc.Value.ToString("O", CultureInfo.InvariantCulture))}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            queryParts.Add($"email={Uri.EscapeDataString(email.Trim())}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(downloadType))
+        {
+            queryParts.Add($"downloadType={Uri.EscapeDataString(downloadType.Trim())}");
+        }
+
+        if (skip.HasValue)
+        {
+            queryParts.Add($"skip={skip.Value}");
+        }
+
+        if (take.HasValue)
+        {
+            queryParts.Add($"take={take.Value}");
+        }
+
+        return queryParts.Count == 0 ? string.Empty : $"?{string.Join("&", queryParts)}";
     }
 
     /// <summary>

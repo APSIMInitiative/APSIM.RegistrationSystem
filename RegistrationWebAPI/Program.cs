@@ -12,6 +12,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 
 // Load environment variables from .env file.
 DotEnv.Load();
@@ -108,6 +109,64 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = static (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        return ValueTask.CompletedTask;
+    };
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetClientIpPartitionKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 300,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("auth-token", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetClientIpPartitionKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 8,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("public-downloads", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetClientIpPartitionKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("authenticated-api", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetClientIpPartitionKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 180,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
+            }));
+});
+
 var app = builder.Build();
 
 string verificationPagePath = Path.Combine(app.Environment.ContentRootPath, "verification.html");
@@ -143,6 +202,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -199,6 +259,7 @@ app.MapPost("/api/auth/token", (AuthTokenRequest request) =>
     });
 })
     .AllowAnonymous()
+    .RequireRateLimiting("auth-token")
     .WithName("CreateAuthToken")
     .WithTags("Authentication")
     .Produces<AuthTokenResponse>(StatusCodes.Status200OK)
@@ -289,6 +350,7 @@ app.MapGet("/api/downloads/link", async (string email, RegistrationDbContext db)
     }
 })
     .AllowAnonymous()
+    .RequireRateLimiting("public-downloads")
     .WithName("CreateDownloadAccessLink")
     .WithTags("Downloads")
     .Produces(StatusCodes.Status200OK)
@@ -298,63 +360,226 @@ app.MapGet("/api/downloads/link", async (string email, RegistrationDbContext db)
 
 app.MapGet("/api/downloads/validate", (string token) =>
 {
-    if (string.IsNullOrWhiteSpace(token))
+    var tokenValidation = ValidateDownloadToken(
+        token,
+        jwtIssuer,
+        jwtAudience,
+        jwtSigningKey,
+        downloadAccessPurposeClaim);
+
+    if (tokenValidation.FailureResult is not null)
     {
-        return Results.BadRequest("Download token is required.");
+        return tokenValidation.FailureResult;
     }
 
-    var validationParameters = new TokenValidationParameters
+    return Results.Ok(new
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateIssuerSigningKey = true,
-        ValidateLifetime = true,
-        ValidIssuer = jwtIssuer,
-        ValidAudience = jwtAudience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
-        ClockSkew = TimeSpan.FromMinutes(1)
-    };
-
-    try
-    {
-        var handler = new JwtSecurityTokenHandler();
-        var principal = handler.ValidateToken(token, validationParameters, out var validatedToken);
-        var jwtToken = validatedToken as JwtSecurityToken;
-
-        var purpose = principal.Claims.FirstOrDefault(c => c.Type == "purpose")?.Value;
-        var email = principal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value
-            ?? principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
-
-        if (!string.Equals(purpose, downloadAccessPurposeClaim, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(email) || jwtToken is null)
-        {
-            return Results.Unauthorized();
-        }
-
-        return Results.Ok(new
-        {
-            isValid = true,
-            email,
-            expiresAtUtc = jwtToken.ValidTo
-        });
-    }
-    catch (SecurityTokenExpiredException)
-    {
-        return Results.BadRequest("Download token has expired.");
-    }
-    catch (SecurityTokenException)
-    {
-        return Results.Unauthorized();
-    }
+        isValid = true,
+        email = tokenValidation.Email,
+        expiresAtUtc = tokenValidation.ExpiresAtUtc
+    });
 })
     .AllowAnonymous()
+    .RequireRateLimiting("public-downloads")
     .WithName("ValidateDownloadAccessToken")
     .WithTags("Downloads")
     .Produces(StatusCodes.Status200OK)
     .Produces(StatusCodes.Status400BadRequest)
     .Produces(StatusCodes.Status401Unauthorized);
 
+app.MapPost("/api/downloads/events", async (DownloadEventRequest request, RegistrationDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.DownloadType))
+    {
+        return Results.BadRequest("Download type is required.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Version))
+    {
+        return Results.BadRequest("Version is required.");
+    }
+
+    var normalizedDownloadType = request.DownloadType.Trim().ToLowerInvariant();
+    if (normalizedDownloadType is not ("nextgen" or "classic"))
+    {
+        return Results.BadRequest("Download type must be either 'nextgen' or 'classic'.");
+    }
+
+    var tokenValidation = ValidateDownloadToken(
+        request.Token,
+        jwtIssuer,
+        jwtAudience,
+        jwtSigningKey,
+        downloadAccessPurposeClaim);
+
+    if (tokenValidation.FailureResult is not null)
+    {
+        return tokenValidation.FailureResult;
+    }
+
+    var email = tokenValidation.Email!;
+    var userId = await db.Users
+        .AsNoTracking()
+        .Where(x => x.Email == email)
+        .Select(x => (Guid?)x.Id)
+        .FirstOrDefaultAsync();
+
+    var entity = new DownloadAuditEntity
+    {
+        Id = Guid.NewGuid(),
+        DownloadedAtUtc = DateTime.UtcNow,
+        UserEmail = email,
+        UserId = userId,
+        DownloadType = normalizedDownloadType,
+        Version = request.Version.Trim(),
+        Platform = string.IsNullOrWhiteSpace(request.Platform) ? null : request.Platform.Trim(),
+        DownloadUrl = string.IsNullOrWhiteSpace(request.DownloadUrl) ? null : request.DownloadUrl.Trim()
+    };
+
+    db.DownloadAudits.Add(entity);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        id = entity.Id,
+        downloadedAtUtc = entity.DownloadedAtUtc
+    });
+})
+    .AllowAnonymous()
+    .RequireRateLimiting("public-downloads")
+    .WithName("RecordDownloadEvent")
+    .WithTags("Downloads")
+    .Produces(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status400BadRequest)
+    .Produces(StatusCodes.Status401Unauthorized);
+
+app.MapGet(
+    "/api/downloads/events",
+    async (
+        RegistrationDbContext db,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? email,
+        string? downloadType,
+        int? skip,
+        int? take) =>
+    {
+        var normalizedSkip = Math.Max(0, skip ?? 0);
+        var normalizedTake = Math.Clamp(take ?? 100, 1, 500);
+
+        var query = db.DownloadAudits.AsNoTracking().AsQueryable();
+
+        if (fromUtc.HasValue)
+        {
+            query = query.Where(x => x.DownloadedAtUtc >= fromUtc.Value);
+        }
+
+        if (toUtc.HasValue)
+        {
+            query = query.Where(x => x.DownloadedAtUtc <= toUtc.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var normalizedEmail = email.Trim();
+            query = query.Where(x => x.UserEmail == normalizedEmail);
+        }
+
+        if (!string.IsNullOrWhiteSpace(downloadType))
+        {
+            var normalizedType = downloadType.Trim().ToLowerInvariant();
+            if (normalizedType is not ("nextgen" or "classic"))
+            {
+                return Results.BadRequest("Download type must be either 'nextgen' or 'classic'.");
+            }
+
+            query = query.Where(x => x.DownloadType == normalizedType);
+        }
+
+        var total = await query.CountAsync();
+        var entities = await query
+            .OrderByDescending(x => x.DownloadedAtUtc)
+            .ThenByDescending(x => x.Id)
+            .Skip(normalizedSkip)
+            .Take(normalizedTake)
+            .ToListAsync();
+
+        var items = entities.Select(ToDownloadAuditResponse).ToList();
+
+        return Results.Ok(new
+        {
+            total,
+            skip = normalizedSkip,
+            take = normalizedTake,
+            items
+        });
+    })
+    .RequireRateLimiting("authenticated-api")
+    .RequireAuthorization()
+    .WithName("ListDownloadEvents")
+    .WithTags("Downloads")
+    .Produces(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status400BadRequest)
+    .Produces(StatusCodes.Status401Unauthorized);
+
+app.MapGet(
+    "/api/downloads/events/export",
+    async (
+        RegistrationDbContext db,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? email,
+        string? downloadType) =>
+    {
+        var query = db.DownloadAudits.AsNoTracking().AsQueryable();
+
+        if (fromUtc.HasValue)
+        {
+            query = query.Where(x => x.DownloadedAtUtc >= fromUtc.Value);
+        }
+
+        if (toUtc.HasValue)
+        {
+            query = query.Where(x => x.DownloadedAtUtc <= toUtc.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var normalizedEmail = email.Trim();
+            query = query.Where(x => x.UserEmail == normalizedEmail);
+        }
+
+        if (!string.IsNullOrWhiteSpace(downloadType))
+        {
+            var normalizedType = downloadType.Trim().ToLowerInvariant();
+            if (normalizedType is not ("nextgen" or "classic"))
+            {
+                return Results.BadRequest("Download type must be either 'nextgen' or 'classic'.");
+            }
+
+            query = query.Where(x => x.DownloadType == normalizedType);
+        }
+
+        var audits = await query
+            .OrderByDescending(x => x.DownloadedAtUtc)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync();
+
+        var csv = BuildDownloadAuditCsv(audits);
+        var fileName = $"download-events-{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+        return Results.File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", fileName);
+    })
+    .RequireRateLimiting("authenticated-api")
+    .RequireAuthorization()
+    .WithName("ExportDownloadEventsCsv")
+    .WithTags("Downloads")
+    .Produces(StatusCodes.Status200OK, contentType: "text/csv")
+    .Produces(StatusCodes.Status400BadRequest)
+    .Produces(StatusCodes.Status401Unauthorized);
+
 var users = app.MapGroup("/api/users")
     .WithTags("Users")
+    .RequireRateLimiting("authenticated-api")
     .RequireAuthorization();
 
 users.MapGet("/", async (RegistrationDbContext db) =>
@@ -504,6 +729,7 @@ users.MapGet("/verify", async (string token, RegistrationDbContext db) =>
 
 var organisations = app.MapGroup("/api/organisations")
     .WithTags("Organisations")
+    .RequireRateLimiting("authenticated-api")
     .RequireAuthorization();
 
 organisations.MapGet("/", async (RegistrationDbContext db) =>
@@ -677,6 +903,63 @@ static string ResolveTemplateLogoUrl(string? configuredLogoUrl, string? baseUrl)
     return "https://www.apsim.info/wp-content/uploads/2026/05/APSIM_transparent-154x100-1.png";
 }
 
+static string GetClientIpPartitionKey(HttpContext httpContext)
+{
+    var clientIp = httpContext.Connection.RemoteIpAddress?.ToString();
+    return string.IsNullOrWhiteSpace(clientIp) ? "unknown" : clientIp;
+}
+
+static (string? Email, DateTime ExpiresAtUtc, IResult? FailureResult) ValidateDownloadToken(
+    string token,
+    string jwtIssuer,
+    string jwtAudience,
+    string jwtSigningKey,
+    string expectedPurposeClaim)
+{
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        return (null, default, Results.BadRequest("Download token is required."));
+    }
+
+    var validationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateIssuerSigningKey = true,
+        ValidateLifetime = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+        ClockSkew = TimeSpan.FromMinutes(1)
+    };
+
+    try
+    {
+        var handler = new JwtSecurityTokenHandler();
+        var principal = handler.ValidateToken(token, validationParameters, out var validatedToken);
+        var jwtToken = validatedToken as JwtSecurityToken;
+
+        var purpose = principal.Claims.FirstOrDefault(c => c.Type == "purpose")?.Value;
+        var email = principal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value
+            ?? principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+
+        if (!string.Equals(purpose, expectedPurposeClaim, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(email) || jwtToken is null)
+        {
+            return (null, default, Results.Unauthorized());
+        }
+
+        return (email, jwtToken.ValidTo, null);
+    }
+    catch (SecurityTokenExpiredException)
+    {
+        return (null, default, Results.BadRequest("Download token has expired."));
+    }
+    catch (SecurityTokenException)
+    {
+        return (null, default, Results.Unauthorized());
+    }
+}
+
 /// <summary>
 /// Maps a UserEntity from the database to a User model used in API responses.
 /// </summary> <param name="entity">The UserEntity to map.</param>
@@ -734,6 +1017,57 @@ static OrganisationEntity ToOrganisationEntity(Organisation model) =>
         DateCreated = model.DateCreated,
         Users = model.Users.Select(ToUserEntity).ToList()
     };
+
+static DownloadAuditResponse ToDownloadAuditResponse(DownloadAuditEntity entity) =>
+    new()
+    {
+        Id = entity.Id,
+        DownloadedAtUtc = entity.DownloadedAtUtc,
+        UserEmail = entity.UserEmail,
+        UserId = entity.UserId,
+        DownloadType = entity.DownloadType,
+        Version = entity.Version,
+        Platform = entity.Platform,
+        DownloadUrl = entity.DownloadUrl
+    };
+
+static string BuildDownloadAuditCsv(IEnumerable<DownloadAuditEntity> audits)
+{
+    var lines = new List<string>
+    {
+        "DownloadedAtUtc,UserEmail,UserId,DownloadType,Version,Platform,DownloadUrl"
+    };
+
+    foreach (var audit in audits)
+    {
+        lines.Add(string.Join(",",
+            EscapeCsv(audit.DownloadedAtUtc.ToString("O")),
+            EscapeCsv(audit.UserEmail),
+            EscapeCsv(audit.UserId?.ToString()),
+            EscapeCsv(audit.DownloadType),
+            EscapeCsv(audit.Version),
+            EscapeCsv(audit.Platform),
+            EscapeCsv(audit.DownloadUrl)));
+    }
+
+    return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+}
+
+static string EscapeCsv(string? value)
+{
+    if (string.IsNullOrEmpty(value))
+    {
+        return string.Empty;
+    }
+
+    var escapedValue = value.Replace("\"", "\"\"");
+    if (escapedValue.Contains(',') || escapedValue.Contains('"') || escapedValue.Contains('\n') || escapedValue.Contains('\r'))
+    {
+        return $"\"{escapedValue}\"";
+    }
+
+    return escapedValue;
+}
 
 static async Task<IResult?> ValidateUserAsync(User user, RegistrationDbContext db, Guid? currentUserId = null)
 {
