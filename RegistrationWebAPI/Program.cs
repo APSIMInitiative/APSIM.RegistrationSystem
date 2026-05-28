@@ -8,6 +8,7 @@ using RegistrationShared.Models;
 using RegistrationWebAPI.Data;
 using RegistrationWebAPI.Models;
 using RegistrationWebAPI.Utilities;
+using System.ComponentModel;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mail;
 using System.Security.Claims;
@@ -882,6 +883,21 @@ organisations.MapGet("/verify", async (string token, RegistrationDbContext db) =
     entity.EmailVerificationTokenExpiryUtc = null;
     await db.SaveChangesAsync();
 
+    if (mailUtility is not null)
+    {
+        await mailUtility.SendOrganisationVerificationSummaryEmailAsync(
+            entity.ContactEmail,
+            entity.Name,
+            entity.ContactName,
+            entity.ContactEmail,
+            entity.ContactPhone,
+            entity.ContactAddress,
+            entity.Emails,
+            GetEnumDescription(entity.LicencePathway),
+            GetEnumDescription(entity.AnnualTurnover),
+            entity.DateCreated);
+    }
+
     return Results.Content(verificationPageHtml, "text/html");
 })
     .AllowAnonymous()
@@ -907,6 +923,17 @@ static string GetClientIpPartitionKey(HttpContext httpContext)
 {
     var clientIp = httpContext.Connection.RemoteIpAddress?.ToString();
     return string.IsNullOrWhiteSpace(clientIp) ? "unknown" : clientIp;
+}
+
+static string GetEnumDescription<TEnum>(TEnum value)
+    where TEnum : Enum
+{
+    var memberInfo = value.GetType().GetMember(value.ToString()).FirstOrDefault();
+    var description = memberInfo?.GetCustomAttributes(typeof(DescriptionAttribute), false)
+        .OfType<DescriptionAttribute>()
+        .FirstOrDefault();
+
+    return description?.Description ?? value.ToString();
 }
 
 static (string? Email, DateTime ExpiresAtUtc, IResult? FailureResult) ValidateDownloadToken(

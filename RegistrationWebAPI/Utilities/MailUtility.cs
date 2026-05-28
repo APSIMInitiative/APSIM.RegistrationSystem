@@ -1,5 +1,6 @@
 using SendGrid;
 using SendGrid.Helpers.Mail;
+using System.Net;
 
 namespace RegistrationWebAPI.Utilities;
 
@@ -34,7 +35,12 @@ public class MailUtility
         _client = new SendGridClient(_apiKey);
     }
 
-    private async Task<Response> SendEmailAsync(string toEmail, string subject, string plainTextContent, string htmlContent)
+    private async Task<Response> SendEmailAsync(
+        string toEmail,
+        string subject,
+        string plainTextContent,
+        string htmlContent,
+        IEnumerable<string>? ccEmails = null)
     {
         if (_client == null)
         {
@@ -44,6 +50,18 @@ public class MailUtility
         var from = new EmailAddress(_fromEmail, _fromEmailName);
         var to = new EmailAddress(toEmail);
         var msg = MailHelper.CreateSingleEmail(from, to, subject, plainTextContent, htmlContent);
+
+        if (ccEmails is not null)
+        {
+            foreach (var ccEmail in ccEmails)
+            {
+                if (!string.IsNullOrWhiteSpace(ccEmail))
+                {
+                    msg.AddCc(new EmailAddress(ccEmail.Trim()));
+                }
+            }
+        }
+
         return await _client.SendEmailAsync(msg);
     }
 
@@ -102,6 +120,115 @@ public class MailUtility
         string plainTextContent = $"Your download link is ready. Click the following link to access your download. This link expires in 48 hours: {downloadLink}";
         string htmlContent = GetDownloadLinkEmailHtml(downloadLink);
         return await SendEmailAsync(toEmail, subject, plainTextContent, htmlContent);
+    }
+
+    public async Task<Response> SendOrganisationVerificationSummaryEmailAsync(
+        string toEmail,
+        string organisationName,
+        string contactName,
+        string contactEmail,
+        string contactPhone,
+        string contactAddress,
+        IEnumerable<string> organisationEmails,
+        string licencePathway,
+        string annualTurnover,
+        DateTime dateCreatedUtc)
+    {
+        const string subject = "APSIM Special Use Registration Submitted";
+        const string businessManagerEmail = "APSIM@csiro.au";
+        string emailList = string.Join(", ", organisationEmails.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()));
+        if (string.IsNullOrWhiteSpace(emailList))
+        {
+            emailList = "Not provided";
+        }
+
+        string createdAtText = dateCreatedUtc.ToString("yyyy-MM-dd HH:mm 'UTC'");
+
+        string plainTextContent =
+            $"Thank you for submitting an application to the APSIM Registration System.{Environment.NewLine}{Environment.NewLine}" +
+            $"Your organisation email has been verified and your registration details were submitted for APSIM business review.{Environment.NewLine}{Environment.NewLine}" +
+            $"Organisation: {organisationName}{Environment.NewLine}" +
+            $"Contact Name: {contactName}{Environment.NewLine}" +
+            $"Contact Email: {contactEmail}{Environment.NewLine}" +
+            $"Contact Phone: {contactPhone}{Environment.NewLine}" +
+            $"Contact Address: {contactAddress}{Environment.NewLine}" +
+            $"Organisation Emails/Domains: {emailList}{Environment.NewLine}" +
+            $"Licence Pathway: {licencePathway}{Environment.NewLine}" +
+            $"Annual Turnover: {annualTurnover}{Environment.NewLine}" +
+            $"Date Submitted: {createdAtText}{Environment.NewLine}{Environment.NewLine}" +
+            "The APSIM Initiative business manager will be in touch shortly to confirm information and to setup billing.";
+
+        string htmlContent = GetOrganisationVerificationSummaryHtml(
+            organisationName,
+            contactName,
+            contactEmail,
+            contactPhone,
+            contactAddress,
+            emailList,
+            licencePathway,
+            annualTurnover,
+            createdAtText);
+
+        return await SendEmailAsync(
+            toEmail,
+            subject,
+            plainTextContent,
+            htmlContent,
+            new[] { businessManagerEmail });
+    }
+
+    private static string Encode(string value)
+    {
+        return WebUtility.HtmlEncode(value);
+    }
+
+    private string GetOrganisationVerificationSummaryHtml(
+        string organisationName,
+        string contactName,
+        string contactEmail,
+        string contactPhone,
+        string contactAddress,
+        string emailList,
+        string licencePathway,
+        string annualTurnover,
+        string createdAtText)
+    {
+        return $@"<html>
+            <body style=""margin:0;padding:0;background:#f4f8f2;font-family:Arial,sans-serif;color:#1f2937;"">
+                <table width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""background:#f4f8f2;"">
+                <tr><td align=""center"" style=""padding:40px 16px;"">
+                    <table cellpadding=""0"" cellspacing=""0"" border=""0"" style=""background:#ffffff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.08);max-width:620px;width:100%;padding:40px 32px;text-align:left;"">
+                    <tr><td align=""center"" style=""padding-bottom:24px;"">
+                        <img src=""{LogoUrl}"" alt=""APSIM"" width=""154"" height=""100"" style=""display:block;margin:0 auto;"" />
+                    </td></tr>
+                    <tr><td align=""center"" style=""padding-bottom:16px;"">
+                        <h1 style=""margin:0;color:#2f8f2f;font-size:1.8rem;"">Special Use Registration Submitted</h1>
+                    </td></tr>
+                    <tr><td align=""center"" style=""padding-bottom:24px;font-size:1rem;line-height:1.6;"">
+                        <p style=""margin:0 0 12px;"">Thank you for submitting an application to the APSIM Registration System.</p>
+                        <p style=""margin:0;"">Your email has been verified and the APSIM business manager has been copied with the registration summary below.</p>
+                    </td></tr>
+                    <tr><td>
+                        <table width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""border-collapse:collapse;font-size:0.95rem;"">
+                            <tr><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;color:#4b5563;width:38%;font-weight:600;"">Organisation</td><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;"">{Encode(organisationName)}</td></tr>
+                            <tr><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;color:#4b5563;font-weight:600;"">Contact Name</td><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;"">{Encode(contactName)}</td></tr>
+                            <tr><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;color:#4b5563;font-weight:600;"">Contact Email</td><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;"">{Encode(contactEmail)}</td></tr>
+                            <tr><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;color:#4b5563;font-weight:600;"">Contact Phone</td><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;"">{Encode(contactPhone)}</td></tr>
+                            <tr><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;color:#4b5563;font-weight:600;"">Contact Address</td><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;"">{Encode(contactAddress)}</td></tr>
+                            <tr><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;color:#4b5563;font-weight:600;"">Organisation Emails/Domains</td><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;"">{Encode(emailList)}</td></tr>
+                            <tr><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;color:#4b5563;font-weight:600;"">Licence Pathway</td><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;"">{Encode(licencePathway)}</td></tr>
+                            <tr><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;color:#4b5563;font-weight:600;"">Annual Turnover</td><td style=""padding:10px 0;border-bottom:1px solid #e5e7eb;"">{Encode(annualTurnover)}</td></tr>
+                            <tr><td style=""padding:10px 0;color:#4b5563;font-weight:600;"">Date Submitted</td><td style=""padding:10px 0;"">{Encode(createdAtText)}</td></tr>
+                        </table>
+                    </td></tr>
+                    <tr><td style=""padding-top:24px;font-size:1rem;line-height:1.6;"">
+                        <p style=""margin:0;"">The APSIM Initiative business manager will be in touch shortly to confirm information and to setup billing.</p>
+                    </td></tr>
+                    </table>
+                </td></tr>
+                </table>
+            </body>
+            </html>";
     }
 
     private string GetDownloadLinkEmailHtml(string downloadLink)
