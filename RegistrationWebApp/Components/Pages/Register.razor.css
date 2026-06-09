@@ -29,3 +29,11 @@
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
     padding: 3%;
 }
+
+#licence-decision-table
+{
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    padding: 3%;
+}

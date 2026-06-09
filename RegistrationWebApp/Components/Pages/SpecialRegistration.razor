@@ -1,0 +1,140 @@
+@using RegistrationShared.Models
+@using RegistrationShared.Enums
+@using RegistrationWebApp.Components.Layout.CustomLayout;
+@using RegistrationWebApp.Components.Classes.Utilities;
+@using System.Runtime.CompilerServices
+@using System.Diagnostics.Eventing.Reader
+@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+@using RegistrationWebApp.Components.Utilities
+@using RegistrationWebApp.Components.Classes;
+@using Microsoft.Extensions.Logging
+@using RegistrationWebApp.Components.Utilities.Models
+
+@namespace RegistrationWebApp.Components.Pages
+@page "/special-registration"
+@*This page allows users to select a product licence and register for it. The content of the page changes based on the selected product.*@
+@rendermode InteractiveServer
+@inject ILogger<Register> Logger
+@inject WebApiUtility webApiUtility
+
+<PageTitle>APSIM Special Use Licence Registration</PageTitle>
+<h2 class="text-center m-4">Register for a Special Use Licence</h2>
+
+<div class="register-row row mt-4" >
+    <div class="col text-center">
+        <div class="special-use-licence-choice-row row mt-4">
+            <div class="special-use-col col-md-6 offset-md-3 mb-4">
+                <h2 class="text-center">Special Use Registration</h2>
+                <div class="alert alert-info " role="alert">
+                    <p>Based on your selections a licence pathway has been selected for you.</p>
+                </div>
+                <EditForm Model="@organisation" OnValidSubmit="() => SubmitOrganisationApplication(organisation)" FormName="specialUseRegistrationForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="special-use-form-row row mb-3">
+                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Email" @bind-Value="organisation!.ContactEmail" />
+                        <ValidationMessage For="@(() => organisation.ContactEmail)" />
+                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Name" @bind-Value="organisation!.ContactName" />
+                        <ValidationMessage For="@(() => organisation.ContactName)" />
+                        <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="organisation!.ContactPhone" />
+                        <ValidationMessage For="@(() => organisation.ContactPhone)" />
+                        <InputText class="form-control mb-2" Placeholder="*Organisation Name" @bind-Value="organisation!.Name" />
+                        <ValidationMessage For="@(() => organisation.Name)" />
+                        <InputText class="form-control mb-2" Placeholder="*Organisation Address" @bind-Value="organisation!.ContactAddress" />
+                        <ValidationMessage For="@(() => organisation.ContactAddress)" />
+                        <InputSelect class="form-control mb-2" @bind-Value="organisation!.LicencePathway">
+                            <option value=""disabled>-- Select Licence Pathway --</option>
+                            @if (Type == "1")
+                            {
+                                <option value="@LicencePathway.TypeOne" selected disabled>@LicencePathway.TypeOne.GetDescription()</option>
+                                <option value="@LicencePathway.TypeTwo" disabled>@LicencePathway.TypeTwo.GetDescription()</option>
+                            }
+                            @if (Type == "2")
+                            {
+                                <option value="@LicencePathway.TypeOne" disabled>@LicencePathway.TypeOne.GetDescription()</option>
+                                <option value="@LicencePathway.TypeTwo" disabled selected>@LicencePathway.TypeTwo.GetDescription()</option>
+                            }
+                        </InputSelect >
+                        <InputSelect class="form-control mb-2" @bind-Value="organisation!.AnnualTurnover">
+                            @foreach (var annualTurnover in Enum.GetValues<AnnualTurnover>())
+                            {
+                                <option value="@annualTurnover">@annualTurnover.GetDescription()</option>
+                            }
+                            <option value="" selected disabled>*-- Select Annual Turnover Range --</option>
+                        </InputSelect >
+                        <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="organisation!.LicenceStatus">
+                            <option value="@OrganisationLicenceStatus.Pending" selected disabled>@OrganisationLicenceStatus.Pending.GetDescription()</option>
+                        </InputSelect >
+
+                        <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
+                    </div>
+                    <p class="mb-2">By clicking submit I have read and agree to the Special Use licence terms.</p>
+                    <p>
+                        <em>Please note that final licence classification is confirmed by the APSIM Initiative.</em>
+                    </p>
+                    <div class="row w-25 mx-auto text-center">
+                        <button type="submit" class="btn btn-success pill-button rounded-pill">Submit Application</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+<CustomModal @bind-IsOpen="showModal" Title="@modalTitle">
+    @* Shows the response message from a registration submission *@
+    @modalMessage
+</CustomModal>
+
+@code
+{
+    private string? Type { get; set; }
+    private Organisation organisation { get; set; } = new();
+    private bool showModal = false;
+    private string modalMessage = string.Empty;
+    private string modalTitle = string.Empty;
+
+    /// <summary>
+    /// Submits an Organisation application to the web API and shows a modal
+    /// </summary>
+    /// <param name="organisation">The organisation registration object containing the organisation's details.</param>
+    /// <returns></returns>
+    private async Task SubmitOrganisationApplication(Organisation organisation)
+    {
+        try
+        {
+            Logger.LogInformation($"Submitting application for {organisation.ContactEmail} from {organisation.Name}");
+            HttpResponseMessage response = await webApiUtility.AddOrganisationAsync(organisation);
+            if (response.IsSuccessStatusCode)
+            {
+                Logger.LogInformation($"Special Use registration successful for {organisation.ContactEmail} with licence pathway {organisation.LicencePathway}");
+                
+                string message = $"A registration confirmation email has been sent to {organisation.ContactEmail}.\n" +
+                    "A representative from the APSIM Initiative will be in touch to confirm your licence classification and next steps.\n";
+                string title = "Registration Submitted For Review";
+                OpenModal(message, title);
+                this.organisation = new Organisation(); // Clear the form
+            }
+            else
+            {
+                Logger.LogError($"Failed to submit registration for {organisation.ContactEmail} from {organisation.Name}. Status Code: {response.StatusCode}");
+                OpenModal("An error occurred while submitting your registration. Please try again later or submit an issue on our GitHub page: https://github.com/APSIMInitiative/APSIM.RegistrationSystem/issues", "Error Submitting Registration");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"An error occurred while submitting registration for {organisation.ContactEmail}");
+            OpenModal("An error occurred while submitting your registration. Please try again later or submit an issue on our GitHub page: https://github.com/APSIMInitiative/APSIM.RegistrationSystem/issues", "Error Submitting Registration");
+        }
+    }
+
+    /// <summary>Opens the modal with a given message and title. </summary>
+    /// <param name="message">The message to display in the modal.</param>
+    /// <param name="title">The title of the modal.</param>
+    private void OpenModal(string message, string title)
+    {
+        showModal = true;
+        modalMessage = message;
+        modalTitle = title;
+    }
+}
