@@ -11,7 +11,14 @@
         @Product.Description
     </div>
     <div class="product-footer text-center mt-auto">
-        <NavLink href="@Product.Href" class="btn btn-success rounded-pill m-2 pill-button">@Product.FirstButtonText</NavLink>
+        <NavLink href="@Product.Href" class="btn btn-success rounded-pill m-2 pill-button">
+            @Product.FirstButtonText
+            <svg class="external-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline; margin-left: 6px; vertical-align: -2px;">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+        </NavLink>
         @if (!string.IsNullOrEmpty(Product.SecondHref) && !string.IsNullOrEmpty(Product.SecondButtonText))
         {
             <NavLink href="@Product.SecondHref" class="btn btn-primary rounded-pill m-2 pill-button-primary">@Product.SecondButtonText</NavLink>
