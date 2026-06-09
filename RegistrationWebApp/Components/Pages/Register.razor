@@ -57,35 +57,13 @@
             StepNumber="1"
             StepQuestionText="Do you intend to use APSIM for commercial purposes?"
             Description=@StepOneDescription
-            ToggleYes="ToggleUseInReleased"
+            ToggleYes="ToggleImprovementsShared"
             ToggleNo="ToggleGeneral"
             ToggleThirdOption="ToggleAll"
             IsVisible="@isCommercialUseDecisionCardVisible"
         />
         <DecisionCard 
             StepNumber="2"
-            StepQuestionText="Do you intend to only use installed/released versions of APSIM?"
-            Description=@StepTwoDescription
-            DecisionOneText="Yes"
-            DecisionTwoText="No"
-            ToggleYes="ToggleSpecial"
-            ToggleNo="ToggleNoCodeChanges"
-            ToggleThirdOption="ToggleAll"
-            IsVisible="@isUseInReleasedDecisionCardVisible"
-        />
-        <DecisionCard 
-            StepNumber="3"
-            StepQuestionText="Do you intend to make modifications to the APSIM source code?"
-            Description=@StepThreeDescription
-            DecisionOneText="Yes"
-            DecisionTwoText="No"
-            ToggleYes="ToggleImprovementsShared"
-            ToggleNo="ToggleSpecial"
-            ToggleThirdOption="ToggleAll"
-            IsVisible="@isNoCodeChangesDecisionCardVisible"
-        />
-        <DecisionCard 
-            StepNumber="4"
             StepQuestionText="Do you intend to share any modifications made back to the APSIM Initiative?"
             Description=@StepFourDescription
             DecisionOneText="Yes"
@@ -118,7 +96,7 @@
                 <EditForm Model="@organisation" OnValidSubmit="() => SubmitOrganisationApplication(organisation)" FormName="specialUseRegistrationForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
-                    <div class="row mb-3">
+                    <div class="special-use-form-row row mb-3">
                         <InputText class="form-control mb-2" Placeholder="*Contact Person's Email" @bind-Value="organisation!.ContactEmail" />
                         <ValidationMessage For="@(() => organisation.ContactEmail)" />
                         <InputText class="form-control mb-2" Placeholder="*Contact Person's Name" @bind-Value="organisation!.ContactName" />
@@ -175,7 +153,7 @@
         <EditForm Model="@generalUseRegistration" OnValidSubmit="() => SubmitUserApplication(generalUseRegistration)" FormName="generalUseRegistrationForm">
             <DataAnnotationsValidator />
             <ValidationSummary />
-            <div class="row mb-3 text-center">
+            <div class="general-use-form-row row mb-3 text-center">
                 <InputText class="form-control mb-2" Placeholder="Email" @bind-Value="generalUseRegistration!.Email" />
                 <ValidationMessage For="@(() => generalUseRegistration.Email)" />
                 <InputSelect hidden @bind-Value="generalUseRegistration!.LicenceStatus" 
@@ -277,39 +255,46 @@
         }
     }
 
+    /// <summary>
+    /// Toggles the visibility of the special use registration form and sets 
+    /// the current step of the special use registration process.
+    /// </summary>
+    /// <returns></returns>
     private async Task ToggleSpecialSharingYes()
     {
         SpecialUseStep = 3;
         isSpecialUseRegistrationVisible = !isSpecialUseRegistrationVisible;
     }
 
+    /// <summary>
+    /// Toggles the visibility of the special use registration form.
+    /// </summary>
+    /// <returns></returns>
     private async Task ToggleSpecial() => isSpecialUseRegistrationVisible = !isSpecialUseRegistrationVisible;
 
+    /// <summary>
+    /// Toggles the visibility of the general use registration form.
+    /// </summary>
+    /// <returns></returns>
     private async Task ToggleGeneral() => isGeneralUseRegistrationVisible = !isGeneralUseRegistrationVisible;
 
-    private async Task ToggleUseInReleased()
-    {
-        isUseInReleasedDecisionCardVisible = !isUseInReleasedDecisionCardVisible;
-        SpecialUseStep = 2;
-    }
-
-    private async Task ToggleNoCodeChanges()
-    {
-        isNoCodeChangesDecisionCardVisible = !isNoCodeChangesDecisionCardVisible;
-        SpecialUseStep = 3;
-    }
-
+    /// <summary>
+    /// Toggles the visibility of the improvements shared decision card and sets the current step.
+    /// </summary>
+    /// <returns></returns>
     private async Task ToggleImprovementsShared()
     {
         areImprovementsSharedDecisionCardVisible = !areImprovementsSharedDecisionCardVisible;
         SpecialUseStep = 4;
     }
 
+    /// <summary>
+    /// Toggles the visibility of all decision cards and registration forms, and resets the current step to 0.
+    /// </summary>
+    /// <returns></returns>
     private async Task ToggleAll()
     {
         isCommercialUseDecisionCardVisible = true;
-        isUseInReleasedDecisionCardVisible = false;
-        isNoCodeChangesDecisionCardVisible = false;
         areImprovementsSharedDecisionCardVisible = false;
         isSpecialUseRegistrationVisible = false;
         isGeneralUseRegistrationVisible = false;
