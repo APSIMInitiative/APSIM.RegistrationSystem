@@ -23,7 +23,7 @@
 
 <Row>
     <div class="col email col-lg-6 offset-lg-3 col-md-8 offset-md-2">
-        <h2 class="text-center m-3">Email Verification</h2>
+        <h3 class="text-center m-3">Email Verification</h3>
         <div class="alert alert-info w-75 mx-auto text-center" role="alert">
             <p>To verify your email, a link will be sent to your inbox. </p>
             <p>Please click the link within the email to confirm your registration and access the download page.</p>
@@ -50,7 +50,7 @@
         </EditForm>
 
         <div class="pdf-div mt-4 mb-4 p-4" hidden="@(GeneralHiddenState ? "hidden" : null)">
-            <h2 class="text-center">Licence Details</h2>
+            <h3 class="text-center">Licence Details</h3>
             <div class="row">
                 <div class="col-md-12 text-center">
                     <iframe src="/Documents/APSIM_General_Use_Licence.pdf" width="100%" height="500"></iframe>
@@ -59,7 +59,7 @@
         </div>
 
         <div class="pdf-div mt-4 mb-4 p-4" hidden="@(SpecialHiddenState ? "hidden" : null)">
-            <h2 class="text-center">Licence Details</h2>
+            <h3 class="text-center">Licence Details</h3>
             <div class="row">
                 <div class="col-md-12 text-center">
                     <iframe src="/Documents/APSIM_Special_Use_Licence.pdf" width="100%" height="500"></iframe>
@@ -70,7 +70,7 @@
 </Row>
 
 <CustomModal Title="@modalTitle" @bind-IsOpen="showModal">
-    <p>@modalMessage</p>
+    @modalMessage
 </CustomModal>
 
 @code

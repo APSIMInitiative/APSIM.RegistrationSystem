@@ -11,7 +11,7 @@
 @using RegistrationWebApp.Components.Utilities.Models
 
 @namespace RegistrationWebApp.Components.Pages
-@page "/register/{ProductId?}"
+@page "/register"
 @*This page allows users to select a product licence and register for it. The content of the page changes based on the selected product.*@
 @rendermode InteractiveServer
 @inject ILogger<Register> Logger
@@ -23,6 +23,8 @@
     <div class="col col-12 mb-4 mt-4">
         <div  class="row mb-4 mt-4">
             <div id="licence-decision-table" class="col col-8 mb-4 mt-4 mx-auto">
+                <h3>Licencing Summary Table</h3>
+                <p>This table provides and compares the main considerations for the three licencing pathways.</p>
                 <table class="table table-bordered table-hover table-striped border-light border border-3">
                     <thead>
                         <tr>
@@ -34,22 +36,22 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Intended Use</td>
+                            <td><strong>Intended Use</strong></td>
                             <td>For educational purposes, for personal learning, or for public good research.</td>
                             <td>For commerical purposes</td>
                             <td>For commerical purposes</td>
                         </tr>
                         <tr>
-                            <td>Intellectual Property Ownership</td>
+                            <td><strong>Intellectual Property Ownership</strong></td>
                             <td>APSIM owns new IP</td>
                             <td>APSIM owns new IP</td>
                             <td>Licencee(s) own new IP</td>
                         </tr>
                         <tr>
-                            <td>Cost</td>
+                            <td><strong>Cost</strong></td>
                             <td>Free</td>
-                            <td>Requires a fee</td>
-                            <td>Requires a fee</td>
+                            <td>Fee determined by annual turnover ($3,638 - $30,319 AUD)</td>
+                            <td>Fee determined by annual turnover ($3,638 - $30,319 AUD)</td>
                         </tr>
                         <tr>
                             <td></td>
