@@ -11,6 +11,42 @@ This repository contains the APSIM registration platform, split across a shared 
 - **[RegistrationWebApp](./RegistrationWebApp/README.md)**: Blazor Server UI for registration and admin workflows.
 - **[Tests](./Tests)**: Automated tests for API behavior and integration points.
 
+### Project Hierarchy
+
+```
+APSIM.RegistrationSystem/
+├── RegistrationShared/          (Shared Models & Enums)
+│   ├── Enums/
+│   │   ├── AnnualTurnover.cs
+│   │   ├── LicencePathway.cs
+│   │   ├── OrganisationLicenceStatus.cs
+│   │   └── UserLicenceStatus.cs
+│   └── Models/
+│       ├── Organisation.cs
+│       └── User.cs
+│
+├── RegistrationWebAPI/          (Backend API)
+│   ├── Data/                    (EF Core Entities & DbContext)
+│   ├── Models/                  (Request/Response DTOs)
+│   ├── Utilities/               (Helper Classes)
+│   ├── Migrations/              (EF Core Migrations)
+│   └── Program.cs               (API Configuration)
+│
+├── RegistrationWebApp/          (Blazor UI)
+│   ├── Components/
+│   │   ├── Pages/               (Routable Pages)
+│   │   ├── Layout/              (Layout Components)
+│   │   ├── LayoutObjects/       (Reusable UI Blocks)
+│   │   ├── Utilities/           (Service Classes)
+│   │   └── Classes/             (Domain Models)
+│   ├── Properties/              (Launch Settings)
+│   ├── wwwroot/                 (Static Assets)
+│   ├── App.razor                (Root Component)
+│   └── Program.cs               (App Configuration)
+│
+└── Tests/                       (Unit & Integration Tests)
+```
+
 ## Quick Start
 
 ### Prerequisites
@@ -101,6 +137,34 @@ This starts:
 ```bash
 docker compose down
 ```
+
+## Web App Pages
+
+The RegistrationWebApp consists of the following routable pages:
+
+| Page | Route | Purpose |
+|------|-------|----------|
+| Home | `/` | Product selection and overview |
+| Register | `/register/{productId?}` | Registration form with licence pathway selection |
+| Download | `/download` | Download APSIM with registration validation |
+| Validate | `/validate` | Validate download access for APSIM Classic |
+| SpecialRegistration | `/special` | Special use registration form |
+| Admin | `/admin` | Admin dashboard for viewing registrations |
+| Error | `/error` | Error display page |
+| NotFound | (implicit 404) | Page not found handler |
+
+## API Endpoints
+
+The RegistrationWebAPI provides RESTful endpoints:
+
+- **Authentication**: `POST /api/auth/token` - Get JWT token
+- **Health**: `GET /health` - API health check
+- **Registrations**: `GET/POST /api/registrations` - List and create registrations
+- **Users**: User management endpoints
+- **Organisations**: Organisation management endpoints
+- **Downloads**: Download audit and access tracking
+
+See [RegistrationWebAPI README](./RegistrationWebAPI/README.md) for detailed endpoint documentation.
 
 ## Project Documentation
 

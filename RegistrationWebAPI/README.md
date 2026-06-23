@@ -1,15 +1,17 @@
-# RegistrationWebApp
+# RegistrationWebAPI
 
-A modern ASP.NET Core minimal Web API for managing general and special use registrations with JWT-based authentication and SQLite persistence.
+A modern ASP.NET Core minimal Web API for managing APSIM registrations with JWT-based authentication and SQLite persistence.
 
 ## Overview
 
-This API provides a complete registration management system supporting two registration types:
+This API provides a complete registration management system supporting:
 
-- **General Use Registrations**: Basic registrations requiring only contact information
-- **Special Use Registrations**: Enhanced registrations requiring organization details and licensing information
+- **General Use Registrations**: Basic registrations with user contact information
+- **Special Use Registrations**: Enhanced registrations with organization details and licensing
+- **Download Tracking**: Audit trail for APSIM downloads and access events
+- **JWT Authentication**: Secure token-based API access
 
-All endpoints (except authentication and health checks) are protected with JWT bearer token authentication.
+All endpoints (except `/health` and `/api/auth/token`) require JWT bearer token authentication.
 
 ## Technology Stack
 
@@ -24,62 +26,79 @@ All endpoints (except authentication and health checks) are protected with JWT b
 
 ### Prerequisites
 
-- .NET 10.0 SDK or later
+- .NET SDK 10.0 (matching solution)
 - Git
 
 ### Installation
 
-1. **Clone the repository**
+From the repository root:
 
-   ```bash
-   git clone https://github.com/APSIMInitiative/APSIM.RegistrationAPIV2.git
-   cd APSIM.RegistrationAPIV2
-   ```
+```bash
+# Restore all dependencies
+dotnet restore
 
-2. **Configure environment variables**
-
-   Copy the example configuration:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Then edit `.env` with your configuration:
-
-   ```env
-   AUTH_USERNAME=your-username
-   AUTH_PASSWORD=your-secure-password
-   JWT_ISSUER=APSIM.RegistrationAPIV2
-   JWT_AUDIENCE=APSIM.RegistrationAPIV2.Client
-   JWT_SIGNING_KEY=your-secret-key-minimum-32-characters-long
-   JWT_TOKEN_EXPIRY_MINUTES=60
-   ```
-
-3. **Restore dependencies**
-
-   ```bash
-   dotnet restore
-   ```
-
-4. **Build the solution**
-
-   ```bash
-   dotnet build
-   ```
+# Build the solution
+dotnet build
+```
 
 ## Running the API
 
 ### From Command Line
 
 ```bash
-dotnet run --project APSIM.RegistrationAPIV2
+dotnet run --project RegistrationWebAPI/RegistrationWebAPI.csproj
 ```
 
 The API will start on `https://localhost:7276` (HTTPS) and `http://localhost:5276` (HTTP).
 
-### From Visual Studio
+### Using VS Code Task
 
-Press `F5` or select **Debug > Start Debugging**.
+1. Open VS Code in the repository
+2. Select **Terminal** > **Run Task...**
+3. Choose **Build WebApi**
+
+### Docker
+
+```bash
+docker build -f RegistrationWebAPI/Dockerfile -t apsim-registration-webapi .
+docker run -p 7276:7276 apsim-registration-webapi
+```
+
+## Project Structure
+
+### Hierarchy Diagram
+
+```
+RegistrationWebAPI/
+├── Data/                           (Entity Framework Core)
+│   ├── RegistrationDbContext.cs   - EF Core DbContext
+│   ├── UserEntity.cs              - User database entity
+│   ├── OrganisationEntity.cs      - Organisation database entity
+│   └── DownloadAuditEntity.cs     - Download audit trail entity
+│
+├── Models/                         (Request/Response DTOs)
+│   ├── AuthTokenRequest.cs        - Login request model
+│   ├── AuthTokenResponse.cs       - JWT token response model
+│   ├── RegistrationErrorResponse.cs - Error response wrapper
+│   ├── DownloadEventRequest.cs    - Download tracking request
+│   ├── DownloadAuditResponse.cs   - Download audit response
+│   ├── MemberOrganisationResponse.cs - Organisation response
+│   ├── BulkDeleteRegistrationsRequest.cs - Bulk delete request
+│   └── RegistrationType.cs        - Registration type enum
+│
+├── Migrations/                     (EF Core Database Migrations)
+│   ├── 20260526014802_InitialMigration.cs
+│   └── 20260527223413_AddDownloadAudits.cs
+│
+├── Utilities/                      (Helper Classes)
+│   └── MailUtility.cs             - Email utility functions
+│
+├── Program.cs                      (API Startup & Configuration)
+├── appsettings.json               (Configuration)
+├── appsettings.Development.json   (Development overrides)
+├── Dockerfile                      (Container configuration)
+└── RegistrationWebAPI.csproj      (Project file)
+```
 
 ## API Documentation
 
@@ -90,83 +109,70 @@ Once the API is running, browse to:
 
 ## API Endpoints
 
+### Core Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/auth/token` | Generate JWT authentication token | ❌ |
+| GET | `/health` | API health check | ❌ |
+| GET/POST | `/api/registrations` | List or create registrations | ✅ |
+| GET | `/api/registrations/{id}` | Get registration by ID | ✅ |
+| GET/POST | `/api/users` | User management | ✅ |
+| GET/POST | `/api/organisations` | Organisation management | ✅ |
+| POST | `/api/downloads/events` | Track download events | ✅ |
+| GET | `/api/downloads/audits` | Get download audit trail | ✅ |
+
 ### Authentication
 
-#### 1. Create JWT Token
+**Generate JWT Token**
 
-```text
+```http
 POST /api/auth/token
 Content-Type: application/json
 
 {
-  "username": "your-username",
-  "password": "your-secure-password"
+  "username": "admin",
+  "password": "secure-password"
 }
 ```
 
-**Response (200 OK)**:
-
+Response:
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresAtUtc": "2026-03-25T15:30:00Z"
+  "expiresAtUtc": "2026-06-23T16:30:00Z"
 }
 ```
 
-**Errors**:
-
-- `401 Unauthorized` - Invalid credentials
-
----
-
 ### Health Check
 
-#### 2. Get API Health
+**Get API Status** (No authentication required)
 
-```text
+```http
 GET /health
 ```
 
-**Response (200 OK)**:
-
+Response:
 ```json
 {
   "status": "ok"
 }
 ```
 
-*No authentication required*
+### Registrations (Requires Authentication)
 
----
-
-### Registrations
-
-**All registration endpoints require JWT bearer authentication:**
-
-```text
+**All requests must include:**
+```http
 Authorization: Bearer <accessToken>
 ```
 
-#### 3. List Registrations
+**List Registrations**
 
-```text
-GET /api/registrations
+```http
+GET /api/registrations?registrationType=GeneralUse&licenceStatus=Active
 ```
 
-**Query Parameters** (optional):
-
-- `registrationType` - Filter by type: `GeneralUse` or `SpecialUse`
-- `licenceStatus` - Filter by status (see Enums section)
-- `contactEmail` - Filter by email address
-
-**Example**:
-
-```text
-GET /api/registrations?registrationType=SpecialUse&licenceStatus=Active
-```
-
-**Response (200 OK)**:
-
+Response:
 ```json
 [
   {
@@ -175,29 +181,16 @@ GET /api/registrations?registrationType=SpecialUse&licenceStatus=Active
     "contactName": "John Doe",
     "contactEmail": "john@example.com",
     "applicationDate": "2026-03-20T10:30:00Z",
-    "licenceStatus": "GeneralUse"
+    "licenceStatus": "Active"
   }
 ]
 ```
 
----
+**Get Registration by ID**
 
-#### 4. Get Registration by ID
-
-```text
+```http
 GET /api/registrations/{id}
 ```
-
-**Response (200 OK)**:
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "registrationType": "GeneralUse",
-  "contactName": "John Doe",
-  "contactEmail": "john@example.com",
-  "applicationDate": "2026-03-20T10:30:00Z",
-  "licenceStatus": "GeneralUse"
 }
 ```
 
@@ -468,10 +461,6 @@ dotnet test
    - Ensure HTTPS is enforced in production
    - Update `AllowedHosts` in `appsettings.json` to specific domains
 
-4. **Consider Additional Security**
-   - Implement rate limiting
-   - Add request logging and monitoring
-   - Enable CORS with appropriate origin restrictions
 
 ## Troubleshooting
 
@@ -501,9 +490,6 @@ Stop-Process -Name dotnet -Force
 3. Push to branch: `git push origin feature/my-feature`
 4. Open a Pull Request
 
-## License
-
-[Your License Here]
 
 ## Contact
 
