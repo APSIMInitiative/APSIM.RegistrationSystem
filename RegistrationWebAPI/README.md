@@ -98,6 +98,34 @@ RegistrationWebAPI/
 ├── appsettings.Development.json   (Development overrides)
 ├── Dockerfile                      (Container configuration)
 └── RegistrationWebAPI.csproj      (Project file)
+└── update-ef-migration.bat        (Database migration script)
+```
+
+## Database Migrations
+
+When modifying any database entity classes in the `Data/` folder (UserEntity, OrganisationEntity, DownloadAuditEntity, etc.), you must generate a new Entity Framework Core migration.
+
+### Running Migrations
+
+Execute the batch file from the RegistrationWebAPI directory:
+
+```bash
+cd RegistrationWebAPI
+update-ef-migration.bat
+```
+
+This script will:
+1. Create a new migration file in the `Migrations/` folder
+2. Update the database context snapshot
+
+**Important**: Commit both the new migration file and any changes to the snapshot file to version control.
+
+### Manual Alternative
+
+If the batch file is unavailable, run:
+
+```bash
+dotnet ef migrations add <MigrationName>
 ```
 
 ## API Documentation
