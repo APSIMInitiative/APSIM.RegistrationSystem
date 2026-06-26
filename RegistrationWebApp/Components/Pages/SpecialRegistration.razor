@@ -24,7 +24,7 @@
     <div class="col text-center">
         <div class="special-use-licence-choice-row row mt-4">
             <div class="special-use-col col-md-6 offset-md-3 mb-4">
-                <h3 class="text-center">Special Use Registration</h3>
+                <h3 class="text-center mb-3">Special Use Registration</h3>
                 <EditForm Model="@organisation" OnValidSubmit="() => SubmitOrganisationApplication(organisation)" FormName="specialUseRegistrationForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
@@ -39,7 +39,7 @@
                         <ValidationMessage For="@(() => organisation.Name)" />
                         <InputText class="form-control mb-2" Placeholder="*Organisation Address" @bind-Value="organisation!.ContactAddress" />
                         <ValidationMessage For="@(() => organisation.ContactAddress)" />
-                        <InputSelect class="form-control mb-2" @bind-Value="organisation!.LicencePathway">
+                        <InputSelect class="form-control mb-2" hidden @bind-Value="organisation!.LicencePathway">
                             <option value=""disabled>-- Select Licence Pathway --</option>
                             @if (Type == "1")
                             {
@@ -65,11 +65,12 @@
 
                         <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
                     </div>
-                    <p class="mb-2">By clicking submit I have read and agree to the Special Use licence terms.</p>
+
                     <p class="mb-2"><strong>Once submitted you'll receive an email asking you to verify your email address before proceeding.</strong></p>
-                    <p>
+                    <p class="mb-2">
                         <em>Please note that final licence classification is confirmed by the APSIM Initiative.</em>
                     </p>
+                    <p class="mb-3">By clicking submit I have read and agree to the Special Use licence terms.</p>
                     <div class="row w-25 mx-auto text-center">
                         <button type="submit" class="btn btn-success pill-button rounded-pill">Submit Application</button>
                     </div>
