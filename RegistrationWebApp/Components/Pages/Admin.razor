@@ -206,10 +206,7 @@
                                 <thead class="table-success">
                                     <tr>
                                         <th>Organisation Name</th>
-                                        <th>Contact Name</th>
-                                        <th>Contact Email</th>
-                                        <th>Contact Phone</th>
-                                        <th>Contact Address</th>
+                                        <th>Emails</th>
                                         <th>Licence Pathway</th>
                                         <th>Annual Turnover</th>
                                         <th>Application Date</th>
@@ -222,10 +219,7 @@
                                     {
                                         <tr>
                                             <td>@organisation.Name</td>
-                                            <td>@organisation.ContactName</td>
-                                            <td>@organisation.ContactEmail</td>
-                                            <td>@organisation.ContactPhone</td>
-                                            <td>@organisation.ContactAddress</td>
+                                            <td>@string.Join(",", organisation.Emails )</td>
                                             <td>@organisation.LicencePathway.GetDescription()</td>
                                             <td>@organisation.AnnualTurnover.GetDescription()</td>
                                             <td>@organisation.DateCreated.ToShortDateString()</td>
@@ -250,27 +244,28 @@
                         <div class="member-org-panel h-100">
                             <h3>Add New Member Organisation</h3>
                             <EditForm Model="MemberOrganisation" OnValidSubmit="HandleNewMemberOrganisationSubmit">
-                                <DataAnnotationsValidator />
-                                <ValidationSummary />
                                     <label for="organisationName" class="form-label">Organisation Name</label>
                                     <InputText id="organisationName" class="form-control" @bind-Value="MemberOrganisation.Name" 
                                         placeholder="Enter organisation name e.g. CSIRO" />
-                                    <InputText id="contactName" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactName" 
-                                        placeholder="Enter contact name e.g. John Doe" />
-                                    <InputText id="contactEmail" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactEmail" 
-                                        placeholder="Enter contact email e.g. john.doe@example.com" />
-                                    <InputText id="contactPhone" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactPhone" 
-                                        placeholder="Enter contact phone e.g. +61 123 456 789" />
-                                    <InputText id="contactAddress" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactAddress" 
-                                        placeholder="Enter contact address e.g. 123 Main St, City, Country" />
                                     <InputSelect id="licencePathway" class="form-select mt-2" @bind-Value="MemberOrganisation.LicencePathway">
-                                        <option value="@LicencePathway.APSIMInitiativeMember" selected>@LicencePathway.APSIMInitiativeMember.GetDescription()</option>
+                                        @foreach (var licencePathway in Enum.GetValues<LicencePathway>())
+                                        {
+                                            <option value="@licencePathway">@licencePathway.GetDescription()</option>
+                                        }
                                     </InputSelect>
                                     <InputSelect id="annualTurnover" class="form-select mt-2" @bind-Value="MemberOrganisation.AnnualTurnover">
                                         <option value="@AnnualTurnover.BelowTwoMillion" selected>@AnnualTurnover.BelowTwoMillion.GetDescription()</option>
+                                        @foreach (var annualTurnover in Enum.GetValues<AnnualTurnover>())
+                                        {
+                                            <option value="@annualTurnover">@annualTurnover.GetDescription()</option>
+                                        }
                                     </InputSelect>
                                     <InputSelect id="licenceStatus" class="form-select mt-2" @bind-Value="MemberOrganisation.LicenceStatus">
                                         <option value="@OrganisationLicenceStatus.Active" selected>@OrganisationLicenceStatus.Active.GetDescription()</option>
+                                        @foreach (var licenceStatus in Enum.GetValues<OrganisationLicenceStatus>())
+                                        {
+                                            <option value="@licenceStatus">@licenceStatus.GetDescription()</option>
+                                        }
                                     </InputSelect>
                                     <button type="submit" class="btn btn-success rounded-pill pill-button mt-4">Add Member Organisation</button>
                             </EditForm>
@@ -325,20 +320,8 @@
                     @if (SpecialOrganisation is not null)
                     {
                         <EditForm Model="SpecialOrganisation" OnValidSubmit="HandleSpecialOrganisationSubmit" class="mt-4">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary />
-
                             <label for="specialOrganisationName" class="form-label">Organisation Name</label>
                             <InputText id="specialOrganisationName" class="form-control" @bind-Value="SpecialOrganisation.Name" placeholder="Organisation name" />
-
-                            <label for="specialContactName" class="form-label mt-2">Contact Name</label>
-                            <InputText id="specialContactName" class="form-control" @bind-Value="SpecialOrganisation.ContactName" placeholder="Contact name" />
-                            <label for="specialContactEmail" class="form-label mt-2">Contact Email</label>
-                            <InputText id="specialContactEmail" class="form-control" @bind-Value="SpecialOrganisation.ContactEmail" placeholder="Contact email" />
-                            <label for="specialContactPhone" class="form-label mt-2">Contact Phone</label>
-                            <InputText id="specialContactPhone" class="form-control" @bind-Value="SpecialOrganisation.ContactPhone" placeholder="Contact phone" />
-                            <label for="specialContactAddress" class="form-label mt-2">Contact Address</label>
-                            <InputText id="specialContactAddress" class="form-control" @bind-Value="SpecialOrganisation.ContactAddress" placeholder="Contact address" />
 
                             <label for="specialOrganisationEmails" class="form-label mt-3">Organisation Emails/Domains</label>
                             <InputTextArea id="specialOrganisationEmails" class="form-control" rows="3" @bind-Value="specialOrganisationEmailsText" />
@@ -507,7 +490,7 @@
                 LicenceStatus = OrganisationLicenceStatus.Active
             };
             ShowModal("Success", "Member organisation added successfully.");
-            await LoadAdminDataAsync();
+            await RefreshUsersAndOrganisationsAsync();
         }
         else
         {
@@ -534,30 +517,37 @@
         try
         {
             Logger.LogInformation("Admin page authenticated. Fetching registrations and member organisations.");
-            users = await WebApiUtility.GetUsersAsync();
-            organisations = await WebApiUtility.GetOrganisationsAsync();
+            await RefreshUsersAndOrganisationsAsync();
             await LoadDownloadMetricsAsync();
-
-            if (!string.IsNullOrWhiteSpace(selectedSpecialOrganisationId))
-            {
-                var selected = organisations.FirstOrDefault(o => o.Id.ToString() == selectedSpecialOrganisationId);
-                SpecialOrganisation = selected is null ? null : CloneOrganisation(selected);
-                if (selected is null)
-                {
-                    selectedSpecialOrganisationId = string.Empty;
-                    specialOrganisationEmailsText = string.Empty;
-                }
-                else
-                {
-                    specialOrganisationEmailsText = string.Join(Environment.NewLine, SpecialOrganisation!.Emails);
-                }
-            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "An error occurred while fetching data for the admin page.");
             ShowModal("Error", "An error occurred while fetching data. Please try again later.");
         }
+    }
+
+    private async Task RefreshUsersAndOrganisationsAsync()
+    {
+        users = await WebApiUtility.GetUsersAsync();
+        organisations = await WebApiUtility.GetOrganisationsAsync();
+
+        if (!string.IsNullOrWhiteSpace(selectedSpecialOrganisationId))
+        {
+            var selected = organisations.FirstOrDefault(o => o.Id.ToString() == selectedSpecialOrganisationId);
+            SpecialOrganisation = selected is null ? null : CloneOrganisation(selected);
+            if (selected is null)
+            {
+                selectedSpecialOrganisationId = string.Empty;
+                specialOrganisationEmailsText = string.Empty;
+            }
+            else
+            {
+                specialOrganisationEmailsText = string.Join(Environment.NewLine, SpecialOrganisation!.Emails);
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadDownloadMetricsAsync()
@@ -740,7 +730,7 @@
         if (response.IsSuccessStatusCode)
         {
             ShowModal("Success", $"Organisation '{SpecialOrganisation.Name}' updated successfully.");
-            await LoadAdminDataAsync();
+            await RefreshUsersAndOrganisationsAsync();
             return;
         }
 
@@ -754,7 +744,7 @@
         if (response.IsSuccessStatusCode)
         {
             ShowModal("Success", $"User '{user.Email}' deleted successfully.");
-            await LoadAdminDataAsync();
+            await RefreshUsersAndOrganisationsAsync();
             return;
         }
 
