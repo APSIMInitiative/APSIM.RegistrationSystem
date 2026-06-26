@@ -66,6 +66,7 @@
                         <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
                     </div>
                     <p class="mb-2">By clicking submit I have read and agree to the Special Use licence terms.</p>
+                    <p class="mb-2"><strong>Once submitted you'll receive an email asking you to verify your email address before proceeding.</strong></p>
                     <p>
                         <em>Please note that final licence classification is confirmed by the APSIM Initiative.</em>
                     </p>
@@ -105,9 +106,8 @@
             if (response.IsSuccessStatusCode)
             {
                 Logger.LogInformation($"Special Use registration successful for {organisation.ContactEmail} with licence pathway {organisation.LicencePathway}");
-                
-                string message = $"A registration confirmation email has been sent to {organisation.ContactEmail}.\n" +
-                    "A representative from the APSIM Initiative will be in touch to confirm your licence classification and next steps.\n";
+                string message = $"A registration confirmation email has been sent to {organisation.ContactEmail}.\n"+
+                    "Please click the link in the email to verify your email address.";
                 string title = "Registration Submitted For Review";
                 OpenModal(message, title);
                 this.organisation = new Organisation(); // Clear the form
