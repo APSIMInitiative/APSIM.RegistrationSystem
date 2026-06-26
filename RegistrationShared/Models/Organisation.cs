@@ -49,7 +49,6 @@ public class Organisation
     /// should be a valid phone number that can be used to contact the organisation 
     /// regarding their licence and registration.
     /// </summary>
-    [Required]
     public string ContactPhone { get; set; } = string.Empty;
 
     /// <summary>
