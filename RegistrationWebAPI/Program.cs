@@ -1,5 +1,6 @@
 using dotenv.net;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -11,8 +12,10 @@ using RegistrationWebAPI.Utilities;
 using System.ComponentModel;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mail;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 
 // Load environment variables from .env file.
@@ -99,6 +102,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddDataProtection();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -202,6 +206,9 @@ string smtpApiKey = Environment.GetEnvironmentVariable("Smtp__ApiKey") ?? string
 if (string.IsNullOrEmpty(smtpApiKey))
     throw new Exception("Unable to create MailUtility: SMTP API key is not configured.");
 mailUtility = CreateMailUtility(smtpApiKey);
+var organisationVerificationPayloadProtector = app.Services
+    .GetRequiredService<IDataProtectionProvider>()
+    .CreateProtector("OrganisationVerificationPayload.v1");
 
 app.MapPost("/api/auth/token", (AuthTokenRequest request) =>
 {
@@ -772,14 +779,29 @@ organisations.MapPost("/", async (Organisation organisation, RegistrationDbConte
     entity.EmailVerificationToken = Guid.NewGuid().ToString("N");
     entity.EmailVerificationTokenExpiryUtc = DateTime.UtcNow.AddHours(verificationTokenLifetimeHours);
 
+    var verificationPayload = new OrganisationVerificationPayload
+    {
+        OrganisationId = entity.Id,
+        OrganisationName = organisation.Name.Trim(),
+        ContactName = organisation.ContactName.Trim(),
+        ContactEmail = organisation.ContactEmail.Trim(),
+        ContactPhone = organisation.ContactPhone.Trim(),
+        ContactAddress = organisation.ContactAddress.Trim(),
+        OrganisationEmails = organisation.Emails.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+        LicencePathway = organisation.LicencePathway,
+        AnnualTurnover = organisation.AnnualTurnover,
+        DateCreatedUtc = entity.DateCreated
+    };
+
     db.Organisations.Add(entity);
     await db.SaveChangesAsync();
 
     if (mailUtility is not null)
     {
+        var protectedPayload = ProtectOrganisationVerificationPayload(verificationPayload, organisationVerificationPayloadProtector);
         var baseUrl = $"{http.Request.Scheme}://{http.Request.Host}";
-        var verificationLink = $"{baseUrl}/api/organisations/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}";
-        await mailUtility.SendVerificationEmailAsync(entity.ContactEmail, verificationLink);
+        var verificationLink = $"{baseUrl}/api/organisations/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}&payload={Uri.EscapeDataString(protectedPayload)}";
+        await mailUtility.SendVerificationEmailAsync(verificationPayload.ContactEmail, verificationLink);
     }
 
     return Results.Created($"/api/organisations/{entity.Id}", ToOrganisationModel(entity));
@@ -799,22 +821,16 @@ organisations.MapPut("/{id:guid}", async (Guid id, Organisation organisation, Re
     {
         return Results.NotFound();
     }
+    // Change this to just check for duplicate org name.
+    bool isNameDuplicate = await IsOrgNameADuplicate(organisation, db, id);
 
-    var validationError = await ValidateOrganisationAsync(organisation, db, id);
-    if (validationError is not null)
-    {
-        return validationError;
-    }
+    if(isNameDuplicate)
+        return Results.Conflict();
+    
 
     entity.Name = organisation.Name.Trim();
     entity.Emails = organisation.Emails.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     entity.LicenceStatus = organisation.LicenceStatus;
-    entity.ContactName = organisation.ContactName.Trim();
-    entity.ContactEmail = organisation.ContactEmail.Trim();
-    entity.ContactPhone = organisation.ContactPhone.Trim();
-    entity.ContactAddress = organisation.ContactAddress.Trim();
-    entity.LicencePathway = organisation.LicencePathway;
-    entity.AnnualTurnover = organisation.AnnualTurnover;
 
     await db.SaveChangesAsync();
 
@@ -850,7 +866,7 @@ organisations.MapDelete("/{id:guid}", async (Guid id, RegistrationDbContext db) 
     .Produces(StatusCodes.Status404NotFound)
     .Produces(StatusCodes.Status409Conflict);
 
-organisations.MapGet("/verify", async (string token, RegistrationDbContext db) =>
+organisations.MapGet("/verify", async (string token, string? payload, RegistrationDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(token))
     {
@@ -875,17 +891,21 @@ organisations.MapGet("/verify", async (string token, RegistrationDbContext db) =
 
     if (mailUtility is not null)
     {
-        await mailUtility.SendOrganisationVerificationSummaryEmailAsync(
-            entity.ContactEmail,
-            entity.Name,
-            entity.ContactName,
-            entity.ContactEmail,
-            entity.ContactPhone,
-            entity.ContactAddress,
-            entity.Emails,
-            GetEnumDescription(entity.LicencePathway),
-            GetEnumDescription(entity.AnnualTurnover),
-            entity.DateCreated);
+        var verificationPayload = UnprotectOrganisationVerificationPayload(payload, organisationVerificationPayloadProtector);
+        if (verificationPayload is not null)
+        {
+            await mailUtility.SendOrganisationVerificationSummaryEmailAsync(
+                verificationPayload.ContactEmail,
+                verificationPayload.OrganisationName,
+                verificationPayload.ContactName,
+                verificationPayload.ContactEmail,
+                verificationPayload.ContactPhone,
+                verificationPayload.ContactAddress,
+                verificationPayload.OrganisationEmails,
+                GetEnumDescription(verificationPayload.LicencePathway),
+                GetEnumDescription(verificationPayload.AnnualTurnover),
+                verificationPayload.DateCreatedUtc);
+        }
     }
 
     return Results.Content(verificationPageHtml, "text/html");
@@ -1008,12 +1028,6 @@ static Organisation ToOrganisationModel(OrganisationEntity entity) =>
         Name = entity.Name,
         Emails = entity.Emails,
         LicenceStatus = entity.LicenceStatus,
-        ContactName = entity.ContactName,
-        ContactEmail = entity.ContactEmail,
-        ContactPhone = entity.ContactPhone,
-        ContactAddress = entity.ContactAddress,
-        LicencePathway = entity.LicencePathway,
-        AnnualTurnover = entity.AnnualTurnover,
         DateCreated = entity.DateCreated,
         Users = entity.Users.Select(ToUserModel).ToList()
     };
@@ -1025,12 +1039,6 @@ static OrganisationEntity ToOrganisationEntity(Organisation model) =>
         Name = model.Name.Trim(),
         Emails = model.Emails.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
         LicenceStatus = model.LicenceStatus,
-        ContactName = model.ContactName.Trim(),
-        ContactEmail = model.ContactEmail.Trim(),
-        ContactPhone = model.ContactPhone.Trim(),
-        ContactAddress = model.ContactAddress.Trim(),
-        LicencePathway = model.LicencePathway,
-        AnnualTurnover = model.AnnualTurnover,
         DateCreated = model.DateCreated,
         Users = model.Users.Select(ToUserEntity).ToList()
     };
@@ -1134,65 +1142,67 @@ static async Task<IResult?> ValidateUserAsync(User user, RegistrationDbContext d
     return null;
 }
 
-static async Task<IResult?> ValidateOrganisationAsync(Organisation organisation, RegistrationDbContext db, Guid? currentOrganisationId = null)
+static async Task<IResult?> ValidateOrganisationAsync(
+    Organisation organisation,
+    RegistrationDbContext db,
+    Guid? currentOrganisationId = null)
 {
+    List<(string, string)> fields =
+    [
+        ("Name", "Name is required."),
+        ("ContactName", "ContactName is required."),
+        ("ContactEmail", "ContactEmail is required."),
+        ("ContactPhone", "ContactPhone is required."),
+        ("ContactAddress", "ContactAddress is required."),
+    ];
+
     var errors = new Dictionary<string, string[]>();
-
-    if (string.IsNullOrWhiteSpace(organisation.Name))
+    foreach((string,string) field in fields)
     {
-        errors["name"] = ["Name is required."];
-    }
-
-    if (string.IsNullOrWhiteSpace(organisation.ContactName))
-    {
-        errors["contactName"] = ["ContactName is required."];
-    }
-
-    if (string.IsNullOrWhiteSpace(organisation.ContactEmail))
-    {
-        errors["contactEmail"] = ["ContactEmail is required."];
-    }
-    else
-    {
-        try
-        {
-            _ = new MailAddress(organisation.ContactEmail);
-        }
-        catch (FormatException)
-        {
-            errors["contactEmail"] = ["ContactEmail is not valid."];
-        }
-    }
-
-    if (string.IsNullOrWhiteSpace(organisation.ContactPhone))
-    {
-        errors["contactPhone"] = ["ContactPhone is required."];
-    }
-
-    if (string.IsNullOrWhiteSpace(organisation.ContactAddress))
-    {
-        errors["contactAddress"] = ["ContactAddress is required."];
+        object? value = null;
+        PropertyInfo? propInfo = typeof(Organisation).GetProperty(field.Item1);
+        if (propInfo != null)
+            value = propInfo.GetValue(organisation);
+        if (string.IsNullOrEmpty(value?.ToString()))
+            errors[field.Item1.ToString()] = [$"{field.Item1} is required."];
     }
 
     if (errors.Count > 0)
-    {
         return Results.ValidationProblem(errors);
-    }
 
-    var normalizedName = organisation.Name.Trim();
-
-    var duplicateName = await db.Organisations.AnyAsync(x =>
-        x.Name == normalizedName &&
-        (!currentOrganisationId.HasValue || x.Id != currentOrganisationId.Value));
-
-    if (duplicateName)
-    {
+    bool isNameDuplicate = await IsOrgNameADuplicate(organisation, db, currentOrganisationId);
+    if (isNameDuplicate)
         return Results.Conflict("An organisation with the same name already exists.");
-    }
 
     return null;
+}
 
+static string ProtectOrganisationVerificationPayload(
+    OrganisationVerificationPayload payload,
+    IDataProtector protector)
+{
+    var payloadJson = JsonSerializer.Serialize(payload);
+    return protector.Protect(payloadJson);
+}
 
+static OrganisationVerificationPayload? UnprotectOrganisationVerificationPayload(
+    string? protectedPayload,
+    IDataProtector protector)
+{
+    if (string.IsNullOrWhiteSpace(protectedPayload))
+    {
+        return null;
+    }
+
+    try
+    {
+        var payloadJson = protector.Unprotect(protectedPayload);
+        return JsonSerializer.Deserialize<OrganisationVerificationPayload>(payloadJson);
+    }
+    catch
+    {
+        return null;
+    }
 }
 
 static MailUtility CreateMailUtility(string smtpApiKey)
@@ -1203,6 +1213,20 @@ static MailUtility CreateMailUtility(string smtpApiKey)
         return newMailUtility;
     }
     throw new Exception("Unable to create MailUtility: SMTP API key is not configured.");
+}
+
+
+static async Task<bool> IsOrgNameADuplicate(
+    Organisation organisation,
+    RegistrationDbContext db,
+    Guid? currentOrganisationId = null)
+{
+    
+    string normalizedName = organisation.Name.Trim();
+    bool duplicateName = await db.Organisations.AnyAsync(x =>
+        x.Name == normalizedName &&
+        (!currentOrganisationId.HasValue || x.Id != currentOrganisationId.Value));
+    return duplicateName;
 }
 
 /// <summary>Marker type used by WebApplicationFactory to locate the RegistrationWebAPI entry point.</summary>

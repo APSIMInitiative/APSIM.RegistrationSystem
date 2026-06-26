@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using RegistrationShared.Enums;
 
 namespace RegistrationWebAPI.Data;
 
@@ -27,52 +26,6 @@ public class OrganisationEntity
     /// organisation has an active licence, is pending review, or is inactive.
     /// </summary>
     public OrganisationLicenceStatus LicenceStatus { get; set; } = OrganisationLicenceStatus.Pending;
-
-    /// <summary>
-    /// The contact name for the organisation. This is a required field and 
-    /// should be a valid name of person who can be contacted regarding the 
-    /// organisation's licence and registration.
-    /// </summary>
-    [Required]
-    public string ContactName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The contact email for the organisation. This is a required field and 
-    /// should be a valid email address that can be used to contact the 
-    /// organisation regarding their licence and registration.
-    /// </summary>
-    [Required]
-    public string ContactEmail { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The contact phone number for the organisation. This is a required field and 
-    /// should be a valid phone number that can be used to contact the organisation 
-    /// regarding their licence and registration.
-    /// </summary>
-    [Required]
-    public string ContactPhone { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The contact address for the organisation. This is a required field and
-    /// should be a valid address that can be used to contact the organisation 
-    /// regarding their licence and registration.
-    /// </summary>
-    [Required]
-    public string ContactAddress { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The licence pathway for the organisation. This is a required field and 
-    /// should be a valid value from the LicencePathway enum.
-    /// </summary>
-    [Required]
-    public LicencePathway LicencePathway { get; set; }
-
-    /// <summary>
-    /// The annual turnover category for the organisation. This is a required field and
-    /// should be a valid value from the AnnualTurnover enum.
-    /// </summary>
-    [Required]
-    public AnnualTurnover AnnualTurnover { get; set; }
 
     /// <summary>
     /// The date and time when the organisation registered. 

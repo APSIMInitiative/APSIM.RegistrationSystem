@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -236,21 +237,41 @@ public sealed class TestRegistrationWebAPI : IAsyncLifetime
     [Fact]
     public async Task VerifyOrganisationEmail_UpdatesLicenceStatus()
     {
-        var createResponse = await client.PostAsJsonAsync("/api/organisations", NewOrganisation("VerifyOrg"));
+        var organisationRequest = NewOrganisation("VerifyOrg");
+        var createResponse = await client.PostAsJsonAsync("/api/organisations", organisationRequest);
         createResponse.EnsureSuccessStatusCode();
         var created = await createResponse.Content.ReadFromJsonAsync<Organisation>();
         Assert.NotNull(created);
 
         string token;
+        string payload;
         using (var scope = mockApi.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
             var entity = await db.Organisations.FirstAsync(x => x.Id == created.Id);
             Assert.NotNull(entity.EmailVerificationToken);
             token = entity.EmailVerificationToken!;
+
+            var protector = scope.ServiceProvider
+                .GetRequiredService<IDataProtectionProvider>()
+                .CreateProtector("OrganisationVerificationPayload.v1");
+
+            payload = protector.Protect(System.Text.Json.JsonSerializer.Serialize(new OrganisationVerificationPayload
+            {
+                OrganisationId = created.Id,
+                OrganisationName = organisationRequest.Name,
+                ContactName = organisationRequest.ContactName,
+                ContactEmail = organisationRequest.ContactEmail,
+                ContactPhone = organisationRequest.ContactPhone,
+                ContactAddress = organisationRequest.ContactAddress,
+                OrganisationEmails = organisationRequest.Emails,
+                LicencePathway = organisationRequest.LicencePathway,
+                AnnualTurnover = organisationRequest.AnnualTurnover,
+                DateCreatedUtc = entity.DateCreated
+            }));
         }
 
-        var verifyResponse = await client.GetAsync($"/api/organisations/verify?token={token}");
+        var verifyResponse = await client.GetAsync($"/api/organisations/verify?token={Uri.EscapeDataString(token)}&payload={Uri.EscapeDataString(payload)}");
         verifyResponse.EnsureSuccessStatusCode();
         Assert.Equal("text/html", verifyResponse.Content.Headers.ContentType?.MediaType);
         var html = await verifyResponse.Content.ReadAsStringAsync();
