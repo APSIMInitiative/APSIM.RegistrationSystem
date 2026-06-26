@@ -43,8 +43,11 @@
                        @bind:event="oninput"
                        @bind:after="OnEmailInputChanged"
                        required>
-                <InputCheckbox class="form-check-input mt-3" type="checkbox" id="licenceAccepted" @bind-Value="formdata.LicenceAccepted" />
-                <label class="form-check-label mt-3" for="licenceAccepted">I have read and accept the licence terms</label>
+                @if (!GeneralHiddenState || !SpecialHiddenState)
+                {
+                    <InputCheckbox class="form-check-input mt-3" type="checkbox" id="licenceAccepted" @bind-Value="formdata.LicenceAccepted" />
+                    <label class="form-check-label mt-3" for="licenceAccepted">I have read and accept the licence terms</label>
+                }
             </div>
             <button type="submit" class="btn btn-primary rounded-pill pill-button-primary">Verify Email</button>
         </EditForm>
