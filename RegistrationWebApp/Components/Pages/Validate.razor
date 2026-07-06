@@ -10,11 +10,17 @@
 @using RegistrationWebApp.Components.Utilities.Models
 @using Microsoft.AspNetCore.WebUtilities
 @using System.ComponentModel.DataAnnotations
+@using BlazoredGoogleCaptcha.Responses
+@using BlazoredGoogleCaptcha.Services
+@using BlazoredGoogleCaptcha
+
 @implements IDisposable
 @inject ILogger<Validate> Logger
 @inject WebApiUtility WebApiUtility
 @inject DownloadAccessState DownloadAccessState
 @inject NavigationManager NavigationManager
+@inject CaptchaService captchaService
+@inject IConfiguration Configuration
 
 @rendermode InteractiveServer
 
@@ -49,7 +55,23 @@
                     <label class="form-check-label mt-3" for="licenceAccepted">I have read and accept the licence terms</label>
                 }
             </div>
-            <button type="submit" class="btn btn-primary rounded-pill pill-button-primary">Verify Email</button>
+            <button type="submit" class="btn btn-primary rounded-pill pill-button-primary" disabled="@IsButtonDisabled">Verify Email</button>
+
+            @if (!string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]))
+            {
+                <div class="mt-2 d-flex justify-content-center">
+                    <Captcha    
+                        SiteKey="@Configuration["Recaptcha:v2SiteKey"]" 
+                        OnSuccess="@OnCaptchaSuccess" 
+                        OnExpired="@OnCaptchaExpired">
+                    </Captcha>
+                </div>
+            }
+            else
+            {
+                <div class="text-danger mt-2">Recaptcha is not configured.</div>
+            }
+
         </EditForm>
 
         <div class="pdf-div mt-4 mb-4 p-4" hidden="@(GeneralHiddenState ? "hidden" : null)">
@@ -85,7 +107,15 @@
     private bool GeneralHiddenState { get; set; } = true;
     private bool SpecialHiddenState { get; set; } = true;
     private CancellationTokenSource? pollingCancellationTokenSource;
+    private bool captchaVerified = false;
+    private bool IsButtonDisabled => !captchaVerified;
 
+    public void Dispose()
+    {
+        pollingCancellationTokenSource?.Cancel();
+        pollingCancellationTokenSource?.Dispose();
+    }
+    
     /// <summary>
     /// This class represents the form data for the email input in 
     /// the existing user registration check.
@@ -249,10 +279,34 @@
         showModal = true;
     }
 
-    public void Dispose()
+
+
+    private async void OnCaptchaSuccess(string response)
     {
-        pollingCancellationTokenSource?.Cancel();
-        pollingCancellationTokenSource?.Dispose();
+        string? captchaSecret = Configuration["Recaptcha:v2SecretKey"];
+        if (string.IsNullOrWhiteSpace(captchaSecret))
+        {
+            Logger.LogError("Recaptcha secret key is not configured.");
+            captchaVerified = false;
+            StateHasChanged();
+            return;
+        }
+
+        CaptchaV2Response? captchaResponse = await captchaService.VerifyV2(captchaSecret, response);
+        if (captchaResponse.Success)
+        {
+            captchaVerified = true;
+            StateHasChanged();
+        }
+        else
+        {
+            //show error message or handle failure
+        }
+    }
+
+    private void OnCaptchaExpired()
+    {
+        captchaVerified = false;
     }
 
 }

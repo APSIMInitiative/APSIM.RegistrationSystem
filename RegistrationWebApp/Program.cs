@@ -1,3 +1,4 @@
+using BlazoredGoogleCaptcha.Services;
 using dotenv.net;
 using RegistrationWebApp.Components;
 using RegistrationWebApp.Components.Utilities;
@@ -9,6 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<WebApiUtility>();
 builder.Services.AddScoped<DownloadAccessState>();
 builder.Services.AddHttpClient<APSIMBuildsAPIUtility>();
+builder.Services.AddSingleton<CaptchaService>();
+
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

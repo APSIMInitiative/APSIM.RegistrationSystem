@@ -9,6 +9,9 @@
 @using RegistrationWebApp.Components.Classes;
 @using Microsoft.Extensions.Logging
 @using RegistrationWebApp.Components.Utilities.Models
+@using BlazoredGoogleCaptcha.Responses
+@using BlazoredGoogleCaptcha.Services
+@using BlazoredGoogleCaptcha
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/special-registration"
@@ -16,6 +19,8 @@
 @rendermode InteractiveServer
 @inject ILogger<Register> Logger
 @inject WebApiUtility webApiUtility
+@inject CaptchaService captchaService
+@inject IConfiguration Configuration
 
 <PageTitle>APSIM Special Use Licence Registration</PageTitle>
 <h2 class="text-center m-4">Register for a Special Use Licence</h2>
@@ -67,13 +72,31 @@
                     </div>
 
                     <p class="mb-2"><strong>Once submitted you'll receive an email asking you to verify your email address before proceeding.</strong></p>
+
                     <p class="mb-2">
                         <em>Please note that final licence classification is confirmed by the APSIM Initiative.</em>
                     </p>
+
                     <p class="mb-3">By clicking submit I have read and agree to the Special Use licence terms.</p>
+
                     <div class="row w-25 mx-auto text-center">
-                        <button type="submit" class="btn btn-success pill-button rounded-pill">Submit Application</button>
+                        <button type="submit" class="btn btn-success pill-button rounded-pill" disabled="@IsButtonDisabled">Submit Application</button>
                     </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]))
+                    {
+                        <div class="mt-2 d-flex justify-content-center">
+                            <Captcha    
+                                SiteKey="@Configuration["Recaptcha:v2SiteKey"]" 
+                                OnSuccess="@OnCaptchaSuccess" 
+                                OnExpired="@OnCaptchaExpired">
+                            </Captcha>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-danger mt-2">Recaptcha is not configured.</div>
+                    }
                 </EditForm>
             </div>
         </div>
@@ -92,6 +115,8 @@
     private bool showModal = false;
     private string modalMessage = string.Empty;
     private string modalTitle = string.Empty;
+    private bool captchaVerified = false;
+    private bool IsButtonDisabled => !captchaVerified;
 
     /// <summary>
     /// Submits an Organisation application to the web API and shows a modal
@@ -134,5 +159,33 @@
         showModal = true;
         modalMessage = message;
         modalTitle = title;
+    }
+
+    private async void OnCaptchaSuccess(string response)
+    {
+        string? captchaSecret = Configuration["Recaptcha:v2SecretKey"];
+        if (string.IsNullOrWhiteSpace(captchaSecret))
+        {
+            Logger.LogError("Recaptcha secret key is not configured.");
+            captchaVerified = false;
+            StateHasChanged();
+            return;
+        }
+
+        CaptchaV2Response? captchaResponse = await captchaService.VerifyV2(captchaSecret, response);
+        if (captchaResponse.Success)
+        {
+            captchaVerified = true;
+            StateHasChanged();
+        }
+        else
+        {
+            //show error message or handle failure
+        }
+    }
+
+    private void OnCaptchaExpired()
+    {
+        captchaVerified = false;
     }
 }

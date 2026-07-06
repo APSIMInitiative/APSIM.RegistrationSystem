@@ -6,6 +6,9 @@
 @using RegistrationWebApp.Components.Utilities
 @using RegistrationWebApp.Components.Utilities.Models
 @using Microsoft.JSInterop
+@using BlazoredGoogleCaptcha.Responses
+@using BlazoredGoogleCaptcha.Services
+@using BlazoredGoogleCaptcha
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/admin/"
@@ -15,6 +18,11 @@
 @inject NavigationManager NavigationManager
 @inject IConfiguration Configuration
 @inject IJSRuntime JS
+@inject CaptchaService captchaService
+
+
+@* Recaptcha code sourced from: https://github.com/CMS365-PTY-LTD/BlazoredGoogleCaptcha *@
+
 
 <PageTitle>Registration Admin</PageTitle>
 
@@ -30,7 +38,21 @@
                     {
                         <div class="text-danger mt-2">@passwordErrorMessage</div>
                     }
-                    <button type="submit" class="btn btn-success rounded-pill pill-button mt-3">Unlock Admin</button>
+                    <button type="submit" class="btn btn-success rounded-pill pill-button mt-3" disabled="@IsButtonDisabled">Unlock Admin</button>
+                    @if (!string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]))
+                    {
+                        <div class="mt-2">
+                            <Captcha    
+                                SiteKey="@Configuration["Recaptcha:v2SiteKey"]" 
+                                OnSuccess="@OnCaptchaSuccess" 
+                                OnExpired="@OnCaptchaExpired">
+                            </Captcha>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-danger mt-2">Recaptcha is not configured.</div>
+                    }
                 </form>
             </div>
         </div>
@@ -208,7 +230,6 @@
                                         <th>Organisation Name</th>
                                         <th>Emails</th>
                                         <th>Licence Pathway</th>
-                                        <th>Annual Turnover</th>
                                         <th>Application Date</th>
                                         <th>Registered Members</th>
                                         <th>Licence Status</th>
@@ -221,7 +242,6 @@
                                             <td>@organisation.Name</td>
                                             <td>@string.Join(",", organisation.Emails )</td>
                                             <td>@organisation.LicencePathway.GetDescription()</td>
-                                            <td>@organisation.AnnualTurnover.GetDescription()</td>
                                             <td>@organisation.DateCreated.ToShortDateString()</td>
                                             <td>@organisation.Users.Count()</td>
                                             <td>@organisation.LicenceStatus.GetDescription()</td>
@@ -335,14 +355,6 @@
                                 }
                             </InputSelect>
 
-                            <label for="specialAnnualTurnover" class="form-label mt-2">Annual Turnover</label>
-                            <InputSelect id="specialAnnualTurnover" class="form-select" @bind-Value="SpecialOrganisation.AnnualTurnover">
-                                @foreach (var annualTurnover in Enum.GetValues<AnnualTurnover>())
-                                {
-                                    <option value="@annualTurnover">@annualTurnover.GetDescription()</option>
-                                }
-                            </InputSelect>
-
                             <label for="specialLicenceStatus" class="form-label mt-2">Licence Status</label>
                             <InputSelect id="specialLicenceStatus" class="form-select" @bind-Value="SpecialOrganisation.LicenceStatus">
                                 @foreach (var licenceStatus in Enum.GetValues<OrganisationLicenceStatus>())
@@ -395,6 +407,9 @@
     private DateTime? csvFilterToDate;
     private string csvFilterEmail = string.Empty;
     private string csvFilterDownloadType = string.Empty;
+
+    private bool captchaVerified = false;
+    private bool IsButtonDisabled => !captchaVerified;
 
     /// <summary>
     /// This property represents a member organisation that can be added through the admin interface.
@@ -750,6 +765,34 @@
 
         Logger.LogError("Failed to delete user {UserId}. Status code: {StatusCode}", user.Id, response.StatusCode);
         ShowModal("Error", $"Failed to delete user '{user.Email}'. Status Code: {response.StatusCode}");
+    }
+
+    private async void OnCaptchaSuccess(string response)
+    {
+        string? captchaSecret = Configuration["Recaptcha:v2SecretKey"];
+        if (string.IsNullOrWhiteSpace(captchaSecret))
+        {
+            Logger.LogError("Recaptcha secret key is not configured.");
+            captchaVerified = false;
+            StateHasChanged();
+            return;
+        }
+
+        CaptchaV2Response? captchaResponse = await captchaService.VerifyV2(captchaSecret, response);
+        if (captchaResponse.Success)
+        {
+            captchaVerified = true;
+            StateHasChanged();
+        }
+        else
+        {
+            //show error message or handle failure
+        }
+    }
+
+    private void OnCaptchaExpired()
+    {
+        captchaVerified = false;
     }
 
 }
