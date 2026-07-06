@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RegistrationWebAPI.Data;
 
@@ -10,9 +11,11 @@ using RegistrationWebAPI.Data;
 namespace RegistrationWebAPI.Migrations
 {
     [DbContext(typeof(RegistrationDbContext))]
-    partial class RegistrationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706014208_PutBackLicencePathway")]
+    partial class PutBackLicencePathway
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -75,15 +78,15 @@ namespace RegistrationWebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("LicencePathway")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("LicenceStatus")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("licencePathway")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

@@ -831,6 +831,7 @@ organisations.MapPut("/{id:guid}", async (Guid id, Organisation organisation, Re
     entity.Name = organisation.Name.Trim();
     entity.Emails = organisation.Emails.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     entity.LicenceStatus = organisation.LicenceStatus;
+    entity.LicencePathway = organisation.LicencePathway;
 
     await db.SaveChangesAsync();
 
@@ -1028,6 +1029,7 @@ static Organisation ToOrganisationModel(OrganisationEntity entity) =>
         Name = entity.Name,
         Emails = entity.Emails,
         LicenceStatus = entity.LicenceStatus,
+        LicencePathway = entity.LicencePathway,
         DateCreated = entity.DateCreated,
         Users = entity.Users.Select(ToUserModel).ToList()
     };
@@ -1039,6 +1041,7 @@ static OrganisationEntity ToOrganisationEntity(Organisation model) =>
         Name = model.Name.Trim(),
         Emails = model.Emails.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
         LicenceStatus = model.LicenceStatus,
+        LicencePathway = model.LicencePathway,
         DateCreated = model.DateCreated,
         Users = model.Users.Select(ToUserEntity).ToList()
     };
@@ -1152,7 +1155,6 @@ static async Task<IResult?> ValidateOrganisationAsync(
         ("Name", "Name is required."),
         ("ContactName", "ContactName is required."),
         ("ContactEmail", "ContactEmail is required."),
-        ("ContactPhone", "ContactPhone is required."),
         ("ContactAddress", "ContactAddress is required."),
     ];
 

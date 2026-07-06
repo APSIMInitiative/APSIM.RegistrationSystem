@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using RegistrationShared.Enums;
 
 namespace RegistrationWebAPI.Data;
 
@@ -26,6 +27,11 @@ public class OrganisationEntity
     /// organisation has an active licence, is pending review, or is inactive.
     /// </summary>
     public OrganisationLicenceStatus LicenceStatus { get; set; } = OrganisationLicenceStatus.Pending;
+
+    /// <summary>
+    /// The licence pathway for the organisation.
+    /// </summary>
+    public LicencePathway LicencePathway {get; set;}
 
     /// <summary>
     /// The date and time when the organisation registered. 
