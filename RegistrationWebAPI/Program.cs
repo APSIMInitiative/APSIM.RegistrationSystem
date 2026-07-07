@@ -42,6 +42,7 @@ builder.Configuration
 string jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
 string jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
 string jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is not configured.");
+string verificationBaseUrl = builder.Configuration["Verification:BaseUrl"] ?? throw new InvalidOperationException("Verification:BaseUrl is not configured.");
 int jwtExpiryMinutes = int.TryParse(builder.Configuration["Jwt:TokenExpiryMinutes"], out var expiryMinutes) ? expiryMinutes : 60;
 int verificationTokenLifetimeHours = int.TryParse(builder.Configuration["Verification:TokenLifetimeHours"], out var tokenLifetimeHours) ? tokenLifetimeHours : 24;
 int downloadTokenLifetimeHours = int.TryParse(builder.Configuration["Download:TokenLifetimeHours"], out var configuredDownloadTokenLifetimeHours)
@@ -637,8 +638,7 @@ users.MapPost("/", async (User user, RegistrationDbContext db, HttpContext http)
 
     if (mailUtility is not null)
     {
-        var baseUrl = $"{http.Request.Scheme}://{http.Request.Host}";
-        var verificationLink = $"{baseUrl}/api/users/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}";
+        var verificationLink = $"{verificationBaseUrl}/api/users/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}";
         await mailUtility.SendVerificationEmailAsync(entity.Email, verificationLink);
     }
 
@@ -799,8 +799,7 @@ organisations.MapPost("/", async (Organisation organisation, RegistrationDbConte
     if (mailUtility is not null)
     {
         var protectedPayload = ProtectOrganisationVerificationPayload(verificationPayload, organisationVerificationPayloadProtector);
-        var baseUrl = $"{http.Request.Scheme}://{http.Request.Host}";
-        var verificationLink = $"{baseUrl}/api/organisations/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}&payload={Uri.EscapeDataString(protectedPayload)}";
+        var verificationLink = $"{verificationBaseUrl}/api/organisations/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}&payload={Uri.EscapeDataString(protectedPayload)}";
         await mailUtility.SendVerificationEmailAsync(verificationPayload.ContactEmail, verificationLink);
     }
 
