@@ -12,8 +12,6 @@
 
 <div class="row">
     <div class="col email col-lg-6 offset-lg-3 col-md-8 offset-md-2">
-        <h3 class="text-center m-3">Verifying organisation email</h3>
-
         @if (isLoading)
         {
             <div class="text-center">
@@ -23,15 +21,15 @@
         }
         else if (isVerified)
         {
+            <h3 class="text-center m-3">Application Submitted</h3>
             <div class="alert alert-success text-center" role="alert">
-                Your organisation email has been verified successfully.
-            </div>
-            <div class="text-center">
-                <a href="/validate" class="btn btn-primary rounded-pill pill-button-primary">Continue to email validation</a>
+                <p>Thank you for submitting an application to the APSIM Registration System.
+                Your email has been verified and someone from our team will be in touch soon.</p>
             </div>
         }
         else
         {
+            <h3 class="text-center m-3">Verifying organisation email</h3>
             <div class="alert alert-warning text-center" role="alert">
                 @errorMessage
             </div>

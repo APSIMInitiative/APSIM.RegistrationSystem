@@ -21,6 +21,7 @@
 @inject WebApiUtility webApiUtility
 @inject CaptchaService captchaService
 @inject IConfiguration Configuration
+@inject NavigationManager NavigationManager
 
 <PageTitle>APSIM Special Use Licence Registration</PageTitle>
 <h2 class="text-center m-4">Register for a Special Use Licence</h2>
@@ -30,7 +31,7 @@
         <div class="special-use-licence-choice-row row mt-4">
             <div class="special-use-col col-md-6 offset-md-3 mb-4">
                 <h3 class="text-center mb-3">Special Use Registration</h3>
-                <EditForm Model="@organisation" OnValidSubmit="() => SubmitOrganisationApplication(organisation)" FormName="specialUseRegistrationForm">
+                <EditForm Model="@organisation" OnValidSubmit="ShowConfirmModal" FormName="specialUseRegistrationForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
                     <div class="special-use-form-row row mb-3">
@@ -77,10 +78,9 @@
                         <em>Please note that final licence classification is confirmed by the APSIM Initiative.</em>
                     </p>
 
-                    <p class="mb-3">By clicking submit I have read and agree to the Special Use licence terms.</p>
 
                     <div class="row w-25 mx-auto text-center">
-                        <button type="submit" class="btn btn-success pill-button rounded-pill" disabled="@IsButtonDisabled">Submit Application</button>
+                        <button type="submit" class="btn btn-success pill-button rounded-pill" disabled="@IsButtonDisabled">Verify email</button>
                     </div>
 
                     @if (IsRecaptchaConfigured)
@@ -108,11 +108,52 @@
     @modalMessage
 </CustomModal>
 
+<TwoButtonModal
+    @bind-IsOpen="showConfirmModal"
+    Title="Confirm Application Details"
+    CancelButtonText="Cancel and change details"
+    SubmitButtonText="Submit application"
+    OnSubmit="SubmitConfirmedApplication">
+    @if (pendingOrganisation is not null)
+    {
+        <div class="text-start">
+            <p>Please confirm these details before submitting:</p>
+            <ul class="mb-0">
+                <li><strong>Organisation Name:</strong> @pendingOrganisation.Name</li>
+                <li><strong>Contact Name:</strong> @pendingOrganisation.ContactName</li>
+                <li><strong>Contact Email:</strong> @pendingOrganisation.ContactEmail</li>
+                <li><strong>Contact Phone:</strong> @(string.IsNullOrWhiteSpace(pendingOrganisation.ContactPhone) ? "Not provided" : pendingOrganisation.ContactPhone)</li>
+                <li><strong>Contact Address:</strong> @pendingOrganisation.ContactAddress</li>
+                <li><strong>Licence Pathway:</strong> @pendingOrganisation.LicencePathway.GetDescription()</li>
+                <li><strong>Annual Turnover:</strong> @pendingOrganisation.AnnualTurnover.GetDescription()</li>
+            </ul>
+        </div>
+    }
+</TwoButtonModal>
+
 @code
 {
     private string? Type { get; set; }
     private Organisation organisation { get; set; } = new();
-    private bool showModal = false;
+    private Organisation? pendingOrganisation;
+    private bool showModal
+    {
+        get => isResultModalOpen;
+        set
+        {
+            bool wasOpen = isResultModalOpen;
+            isResultModalOpen = value;
+
+            if (wasOpen && !value && redirectToHomeAfterModalClose)
+            {
+                redirectToHomeAfterModalClose = false;
+                NavigationManager.NavigateTo("/");
+            }
+        }
+    }
+    private bool isResultModalOpen = false;
+    private bool showConfirmModal = false;
+    private bool redirectToHomeAfterModalClose = false;
     private string modalMessage = string.Empty;
     private string modalTitle = string.Empty;
     private bool captchaVerified = false;
@@ -130,6 +171,7 @@
     {
         try
         {
+            redirectToHomeAfterModalClose = false;
             Logger.LogInformation($"Submitting application for {organisation.ContactEmail} from {organisation.Name}");
             HttpResponseMessage response = await webApiUtility.AddOrganisationAsync(organisation);
             if (response.IsSuccessStatusCode)
@@ -138,6 +180,7 @@
                 string message = $"A registration confirmation email has been sent to {organisation.ContactEmail}.\n"+
                     "Please click the link in the email to verify your email address.";
                 string title = "Registration Submitted For Review";
+                redirectToHomeAfterModalClose = true;
                 OpenModal(message, title);
                 this.organisation = new Organisation(); // Clear the form
             }
@@ -162,6 +205,32 @@
         showModal = true;
         modalMessage = message;
         modalTitle = title;
+    }
+
+    private void ShowConfirmModal()
+    {
+        pendingOrganisation = new Organisation
+        {
+            Name = organisation.Name,
+            ContactName = organisation.ContactName,
+            ContactEmail = organisation.ContactEmail,
+            ContactPhone = organisation.ContactPhone,
+            ContactAddress = organisation.ContactAddress,
+            LicencePathway = organisation.LicencePathway,
+            AnnualTurnover = organisation.AnnualTurnover,
+            LicenceStatus = organisation.LicenceStatus
+        };
+        showConfirmModal = true;
+    }
+
+    private async Task SubmitConfirmedApplication()
+    {
+        if (pendingOrganisation is null)
+        {
+            return;
+        }
+
+        await SubmitOrganisationApplication(pendingOrganisation);
     }
 
     private async void OnCaptchaSuccess(string response)

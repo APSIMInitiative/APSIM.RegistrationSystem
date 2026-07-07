@@ -1,0 +1,70 @@
+@namespace RegistrationWebApp.Components.Layout.CustomLayout
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-center">@Title</h5>
+                    <button type="button" class="btn-close" @onclick="Cancel" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    @ChildContent
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">@CancelButtonText</button>
+                    <button type="button" class="btn btn-primary" @onclick="Submit">@SubmitButtonText</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Modal Title";
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    ///<summary>
+    /// This property is used to control the visibility of the modal. 
+    /// When set to true, the modal will be displayed; when set to false, 
+    /// it will be hidden.
+    ///</summary>
+    /// <remarks>
+    /// The IsOpen property is typically bound to a boolean variable in the 
+    /// parent component that manages the state of the modal. 
+    /// By using two-way binding (e.g., @bind-IsOpen), 
+    /// the parent component can easily control when the modal is shown or 
+    /// hidden based on user interactions or other events.
+    /// </remarks>
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsOpenChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnSubmit { get; set; }
+
+    [Parameter]
+    public string CancelButtonText { get; set; } = "Cancel";
+
+    [Parameter]
+    public string SubmitButtonText { get; set; } = "Submit";
+
+    private Task Cancel()
+    {
+        IsOpen = false;
+        return IsOpenChanged.InvokeAsync(IsOpen);
+    }
+
+    private async Task Submit()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(IsOpen);
+        await OnSubmit.InvokeAsync();
+    }
+}
