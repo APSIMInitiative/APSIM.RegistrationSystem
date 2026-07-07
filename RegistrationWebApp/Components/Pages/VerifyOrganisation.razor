@@ -1,0 +1,112 @@
+@using Microsoft.AspNetCore.WebUtilities
+@using RegistrationWebApp.Components.Utilities
+
+@namespace RegistrationWebApp.Components.Pages
+@page "/verify-organisation"
+@rendermode InteractiveServer
+@inject ILogger<VerifyOrganisation> Logger
+@inject NavigationManager NavigationManager
+@inject WebApiUtility WebApiUtility
+
+<PageTitle>Verifying Organisation</PageTitle>
+
+<div class="row">
+    <div class="col email col-lg-6 offset-lg-3 col-md-8 offset-md-2">
+        <h3 class="text-center m-3">Verifying organisation email</h3>
+
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <p>Please wait while we verify your organisation.</p>
+                <div class="spinner-border text-success" role="status"></div>
+            </div>
+        }
+        else if (isVerified)
+        {
+            <div class="alert alert-success text-center" role="alert">
+                Your organisation email has been verified successfully.
+            </div>
+            <div class="text-center">
+                <a href="/validate" class="btn btn-primary rounded-pill pill-button-primary">Continue to email validation</a>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning text-center" role="alert">
+                @errorMessage
+            </div>
+            <div class="text-center">
+                <a href="/special-registration" class="btn btn-primary rounded-pill pill-button-primary">Back to special registration</a>
+            </div>
+        }
+    </div>
+</div>
+
+@code
+{
+    private bool isLoading = true;
+    private bool isVerified;
+    private string errorMessage = "Your verification link is invalid or has expired.";
+    private string? token;
+    private string? payload;
+
+    protected override Task OnInitializedAsync()
+    {
+        (token, payload) = GetVerificationQueryValues();
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(payload))
+        {
+            errorMessage = "Verification token is missing.";
+            isLoading = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(payload))
+        {
+            return;
+        }
+
+        try
+        {
+            isVerified = await WebApiUtility.VerifyOrganisationAsync(token, payload);
+            if (!isVerified)
+            {
+                errorMessage = "Your verification link is invalid or has expired.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed while verifying organisation email token.");
+            errorMessage = "Unable to verify your organisation right now. Please try again.";
+            isVerified = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private (string? Token, string? Payload) GetVerificationQueryValues()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (string.IsNullOrWhiteSpace(uri.Query))
+        {
+            return (null, null);
+        }
+
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        query.TryGetValue("token", out var tokenValue);
+        query.TryGetValue("payload", out var payloadValue);
+
+        var token = tokenValue.ToString();
+        var payload = payloadValue.ToString();
+
+        return (
+            string.IsNullOrWhiteSpace(token) ? null : token,
+            string.IsNullOrWhiteSpace(payload) ? null : payload);
+    }
+}

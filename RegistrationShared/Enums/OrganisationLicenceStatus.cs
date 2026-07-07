@@ -4,8 +4,9 @@
 /// </summary>
 public enum OrganisationLicenceStatus
 {
+
     /// <summary>
-    /// The organisation has applied for a licence and is awaiting review.
+    /// The organisation has applied for a licence, has been verified and is awaiting review.
     /// </summary>
     Pending,
     /// <summary>
@@ -17,6 +18,10 @@ public enum OrganisationLicenceStatus
     /// This could be due to cancellation, expiry, or other reasons 
     /// that have resulted in the licence being no longer valid for use.
     /// </summary>
-    Inactive
+    Inactive,
+    /// <summary>
+    /// The organisation has verified its email address and is awaiting licence review.
+    /// </summary>
+    EmailVerified
 
 }

@@ -60,7 +60,7 @@
             </div>
             <button type="submit" class="btn btn-primary rounded-pill pill-button-primary" disabled="@IsButtonDisabled">Verify Email</button>
 
-            @if (!string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]))
+            @if (IsRecaptchaConfigured)
             {
                 <div class="mt-2 d-flex justify-content-center">
                     <Captcha    
@@ -111,7 +111,10 @@
     private bool SpecialHiddenState { get; set; } = true;
     private CancellationTokenSource? pollingCancellationTokenSource;
     private bool captchaVerified = false;
-    private bool IsButtonDisabled => !captchaVerified;
+    private bool IsRecaptchaConfigured =>
+        !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]) &&
+        !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SecretKey"]);
+    private bool IsButtonDisabled => IsRecaptchaConfigured && !captchaVerified;
 
     public void Dispose()
     {
@@ -282,8 +285,6 @@
         modalMessage = message;
         showModal = true;
     }
-
-
 
     private async void OnCaptchaSuccess(string response)
     {

@@ -83,7 +83,7 @@
                         <button type="submit" class="btn btn-success pill-button rounded-pill" disabled="@IsButtonDisabled">Submit Application</button>
                     </div>
 
-                    @if (!string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]))
+                    @if (IsRecaptchaConfigured)
                     {
                         <div class="mt-2 d-flex justify-content-center">
                             <Captcha    
@@ -116,7 +116,10 @@
     private string modalMessage = string.Empty;
     private string modalTitle = string.Empty;
     private bool captchaVerified = false;
-    private bool IsButtonDisabled => !captchaVerified;
+    private bool IsRecaptchaConfigured =>
+        !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]) &&
+        !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SecretKey"]);
+    private bool IsButtonDisabled => IsRecaptchaConfigured && !captchaVerified;
 
     /// <summary>
     /// Submits an Organisation application to the web API and shows a modal

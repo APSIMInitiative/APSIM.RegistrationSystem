@@ -11,6 +11,7 @@ using RegistrationShared.Models;
 using RegistrationWebAPI.Data;
 using RegistrationWebAPI.Models;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text;
 using Tests.Utilities;
 
@@ -70,9 +71,12 @@ public sealed class TestRegistrationWebAPI : IAsyncLifetime
 
         var verifyResponse = await client.GetAsync($"/api/users/verify?token={token}");
         verifyResponse.EnsureSuccessStatusCode();
-        Assert.Equal("text/html", verifyResponse.Content.Headers.ContentType?.MediaType);
-        var html = await verifyResponse.Content.ReadAsStringAsync();
-        Assert.Contains("Email Verified", html, StringComparison.Ordinal);
+        Assert.Equal("application/json", verifyResponse.Content.Headers.ContentType?.MediaType);
+        var responseBody = await verifyResponse.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(responseBody);
+        var downloadUrl = json.RootElement.GetProperty("downloadUrl").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(downloadUrl));
+        Assert.StartsWith("http", downloadUrl, StringComparison.OrdinalIgnoreCase);
 
         using (var scope = mockApi.Services.CreateScope())
         {
@@ -232,6 +236,13 @@ public sealed class TestRegistrationWebAPI : IAsyncLifetime
         Assert.NotNull(created);
         Assert.Equal(org.Name, created.Name);
         Assert.NotEqual(Guid.Empty, created.Id);
+
+        using var scope = mockApi.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
+        var persisted = await db.Organisations.FirstAsync(x => x.Id == created.Id);
+        Assert.False(string.IsNullOrWhiteSpace(persisted.EmailVerificationToken));
+        Assert.NotNull(persisted.EmailVerificationTokenExpiryUtc);
+        Assert.True(persisted.EmailVerificationTokenExpiryUtc > DateTime.UtcNow);
     }
 
     [Fact]
@@ -273,15 +284,17 @@ public sealed class TestRegistrationWebAPI : IAsyncLifetime
 
         var verifyResponse = await client.GetAsync($"/api/organisations/verify?token={Uri.EscapeDataString(token)}&payload={Uri.EscapeDataString(payload)}");
         verifyResponse.EnsureSuccessStatusCode();
-        Assert.Equal("text/html", verifyResponse.Content.Headers.ContentType?.MediaType);
-        var html = await verifyResponse.Content.ReadAsStringAsync();
-        Assert.Contains("Email Verified", html, StringComparison.Ordinal);
+        Assert.Equal("application/json", verifyResponse.Content.Headers.ContentType?.MediaType);
+        var responseBody = await verifyResponse.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(responseBody);
+        var isVerifiedResponse = json.RootElement.GetProperty("verified").GetBoolean();
+        Assert.True(isVerifiedResponse);
 
         using (var scope = mockApi.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
             var verified = await db.Organisations.FirstAsync(x => x.Id == created.Id);
-            Assert.Equal(OrganisationLicenceStatus.Active, verified.LicenceStatus);
+            Assert.Equal(OrganisationLicenceStatus.EmailVerified, verified.LicenceStatus);
         }
     }
 
@@ -295,9 +308,9 @@ public sealed class TestRegistrationWebAPI : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
         Assert.NotNull(problem);
-        Assert.True(problem.Errors.ContainsKey("name"));
-        Assert.True(problem.Errors.ContainsKey("contactName"));
-        Assert.True(problem.Errors.ContainsKey("contactEmail"));
+        Assert.True(problem.Errors.ContainsKey("Name"));
+        Assert.True(problem.Errors.ContainsKey("ContactName"));
+        Assert.True(problem.Errors.ContainsKey("ContactEmail"));
     }
 
     [Fact]

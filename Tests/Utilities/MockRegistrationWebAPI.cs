@@ -29,6 +29,8 @@ public sealed class MockRegistrationWebAPI : WebApplicationFactory<RegistrationW
 		SetEnvironmentVariable("Jwt__Audience", "registration-tests");
 		SetEnvironmentVariable("Jwt__SigningKey", "registration-tests-signing-key-1234567890");
 		SetEnvironmentVariable("Jwt__TokenExpiryMinutes", "60");
+		SetEnvironmentVariable("Verification__BaseUrl", "https://localhost");
+		SetEnvironmentVariable("Download__BaseUrl", "https://localhost");
 		SetEnvironmentVariable("ConnectionStrings__RegistrationDb", "Data Source=registration-tests");
 		SetEnvironmentVariable("Smtp__ApiKey", "test-smtp-api-key");
 		connection.Open();
@@ -132,6 +134,8 @@ public sealed class MockRegistrationWebAPI : WebApplicationFactory<RegistrationW
 				["Jwt:Audience"] = "registration-tests",
 				["Jwt:SigningKey"] = "registration-tests-signing-key-1234567890",
 				["Jwt:TokenExpiryMinutes"] = "60",
+				["Verification:BaseUrl"] = "https://localhost",
+				["Download:BaseUrl"] = "https://localhost",
 				["ConnectionStrings:RegistrationDb"] = "Data Source=registration-tests",
 			});
 		});

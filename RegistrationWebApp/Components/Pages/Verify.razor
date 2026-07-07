@@ -1,0 +1,90 @@
+@using Microsoft.AspNetCore.WebUtilities
+@using RegistrationWebApp.Components.Utilities
+
+@namespace RegistrationWebApp.Components.Pages
+@page "/verify"
+@rendermode InteractiveServer
+@inject ILogger<Verify> Logger
+@inject NavigationManager NavigationManager
+@inject WebApiUtility WebApiUtility
+
+<PageTitle>Verifying Email</PageTitle>
+
+<div class="row">
+    <div class="col email col-lg-6 offset-lg-3 col-md-8 offset-md-2">
+        <h3 class="text-center m-3">Verifying your email</h3>
+
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <p>Please wait while we verify your email and prepare your download access.</p>
+                <div class="spinner-border text-success" role="status"></div>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-warning text-center" role="alert">
+                @errorMessage
+            </div>
+            <div class="text-center">
+                <a href="/validate" class="btn btn-primary rounded-pill pill-button-primary">Back to email validation</a>
+            </div>
+        }
+    </div>
+</div>
+
+@code
+{
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = GetTokenFromQueryString();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            errorMessage = "Verification token is missing.";
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            var downloadUrl = await WebApiUtility.VerifyUserAndGetDownloadUrlAsync(token);
+            if (string.IsNullOrWhiteSpace(downloadUrl))
+            {
+                errorMessage = "Your verification link is invalid or has expired.";
+                return;
+            }
+
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed while verifying user email token.");
+            errorMessage = "Unable to verify your email right now. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string? GetTokenFromQueryString()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (string.IsNullOrWhiteSpace(uri.Query))
+        {
+            return null;
+        }
+
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        if (!query.TryGetValue("token", out var tokenValue))
+        {
+            return null;
+        }
+
+        var token = tokenValue.ToString();
+        return string.IsNullOrWhiteSpace(token) ? null : token;
+    }
+}

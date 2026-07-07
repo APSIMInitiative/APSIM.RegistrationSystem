@@ -24,6 +24,7 @@ public partial class WebApiUtility
 
     private const string AuthTokenEndpoint = "api/auth/token";
     private const string UsersEndpoint = "api/users";
+    private const string UserVerificationEndpoint = "api/users/verify";
     private const string OrganisationsEndpoint = "api/organisations";
     private const string DownloadLinkEndpoint = "api/downloads/link";
     private const string DownloadTokenValidationEndpoint = "api/downloads/validate";
@@ -275,6 +276,51 @@ public partial class WebApiUtility
             return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Verifies a user email token and returns a WebApp download URL when verification succeeds.
+    /// </summary>
+    /// <param name="token">The user verification token from the query string.</param>
+    public async Task<string?> VerifyUserAndGetDownloadUrlAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        string endpoint = GetEndpointUrl($"{UserVerificationEndpoint}?token={Uri.EscapeDataString(token)}");
+        HttpResponseMessage response = await _client.GetAsync(endpoint);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        string content = await response.Content.ReadAsStringAsync();
+        using JsonDocument jsonDocument = JsonDocument.Parse(content);
+        if (!jsonDocument.RootElement.TryGetProperty("downloadUrl", out JsonElement downloadUrlElement))
+        {
+            return null;
+        }
+
+        return downloadUrlElement.GetString();
+    }
+
+    /// <summary>
+    /// Verifies an organisation email token.
+    /// </summary>
+    /// <param name="token">The organisation verification token.</param>
+    /// <param name="payload">The protected organisation verification payload.</param>
+    public async Task<bool> VerifyOrganisationAsync(string token, string payload)
+    {
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(payload))
+        {
+            return false;
+        }
+
+        string endpoint = GetEndpointUrl($"{OrganisationsEndpoint}/verify?token={Uri.EscapeDataString(token)}&payload={Uri.EscapeDataString(payload)}");
+        HttpResponseMessage response = await _client.GetAsync(endpoint);
+        return response.IsSuccessStatusCode;
     }
 
     /// <summary>

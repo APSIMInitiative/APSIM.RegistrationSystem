@@ -53,7 +53,9 @@ if (downloadTokenLifetimeHours <= 0)
     downloadTokenLifetimeHours = 48;
 }
 
-var downloadBaseUrl = builder.Configuration["Download:BaseUrl"] ?? builder.Configuration["Verification:BaseUrl"];
+string downloadBaseUrl = builder.Configuration["Download:BaseUrl"]
+    ?? builder.Configuration["Verification:BaseUrl"]
+    ?? throw new InvalidOperationException("Download:BaseUrl or Verification:BaseUrl is not configured.");
 const string downloadAccessPurposeClaim = "download-access";
 
 builder.Services.AddProblemDetails();
@@ -638,7 +640,8 @@ users.MapPost("/", async (User user, RegistrationDbContext db, HttpContext http)
 
     if (mailUtility is not null)
     {
-        var verificationLink = $"{verificationBaseUrl}/api/users/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}";
+        var verificationPageUrl = new Uri(new Uri(downloadBaseUrl), "verify").ToString();
+        var verificationLink = $"{verificationPageUrl}?token={Uri.EscapeDataString(entity.EmailVerificationToken)}";
         await mailUtility.SendVerificationEmailAsync(entity.Email, verificationLink);
     }
 
@@ -717,11 +720,26 @@ users.MapGet("/verify", async (string token, RegistrationDbContext db) =>
     entity.EmailVerificationTokenExpiryUtc = null;
     await db.SaveChangesAsync();
 
-    return Results.Content(verificationPageHtml, "text/html");
+    var downloadLink = CreateDownloadAccessLink(
+        entity.Email,
+        DateTime.UtcNow,
+        downloadTokenLifetimeHours,
+        jwtIssuer,
+        jwtAudience,
+        jwtSigningKey,
+        downloadAccessPurposeClaim,
+        downloadBaseUrl);
+
+    return Results.Ok(new
+    {
+        verified = true,
+        email = entity.Email,
+        downloadUrl = downloadLink
+    });
 })
     .AllowAnonymous()
     .WithName("VerifyUserEmail")
-    .Produces(StatusCodes.Status200OK, contentType: "text/html")
+    .Produces(StatusCodes.Status200OK)
     .Produces(StatusCodes.Status400BadRequest)
     .Produces(StatusCodes.Status404NotFound);
 
@@ -796,10 +814,30 @@ organisations.MapPost("/", async (Organisation organisation, RegistrationDbConte
     db.Organisations.Add(entity);
     await db.SaveChangesAsync();
 
+    var persistedVerificationData = await db.Organisations
+        .AsNoTracking()
+        .Where(x => x.Id == entity.Id)
+        .Select(x => new
+        {
+            x.EmailVerificationToken,
+            x.EmailVerificationTokenExpiryUtc
+        })
+        .FirstOrDefaultAsync();
+
+    if (persistedVerificationData is null ||
+        string.IsNullOrWhiteSpace(persistedVerificationData.EmailVerificationToken) ||
+        persistedVerificationData.EmailVerificationTokenExpiryUtc is null)
+    {
+        return Results.Problem(
+            "Unable to persist organisation verification token details.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+
     if (mailUtility is not null)
     {
         var protectedPayload = ProtectOrganisationVerificationPayload(verificationPayload, organisationVerificationPayloadProtector);
-        var verificationLink = $"{verificationBaseUrl}/api/organisations/verify?token={Uri.EscapeDataString(entity.EmailVerificationToken)}&payload={Uri.EscapeDataString(protectedPayload)}";
+        var verificationPageUrl = new Uri(new Uri(downloadBaseUrl), "verify-organisation").ToString();
+        var verificationLink = $"{verificationPageUrl}?token={Uri.EscapeDataString(persistedVerificationData.EmailVerificationToken)}&payload={Uri.EscapeDataString(protectedPayload)}";
         await mailUtility.SendVerificationEmailAsync(verificationPayload.ContactEmail, verificationLink);
     }
 
@@ -872,7 +910,7 @@ organisations.MapGet("/verify", async (string token, string? payload, Registrati
     {
         return Results.BadRequest("Verification token is required.");
     }
-
+    var entities = await db.Organisations.ToListAsync();
     var entity = await db.Organisations.FirstOrDefaultAsync(x => x.EmailVerificationToken == token);
     if (entity is null)
     {
@@ -884,7 +922,7 @@ organisations.MapGet("/verify", async (string token, string? payload, Registrati
         return Results.BadRequest("Verification token has expired.");
     }
 
-    entity.LicenceStatus = OrganisationLicenceStatus.Active;
+    entity.LicenceStatus = OrganisationLicenceStatus.EmailVerified;
     entity.EmailVerificationToken = null;
     entity.EmailVerificationTokenExpiryUtc = null;
     await db.SaveChangesAsync();
@@ -908,11 +946,16 @@ organisations.MapGet("/verify", async (string token, string? payload, Registrati
         }
     }
 
-    return Results.Content(verificationPageHtml, "text/html");
+    return Results.Ok(new
+    {
+        verified = true,
+        organisationId = entity.Id,
+        organisationName = entity.Name
+    });
 })
     .AllowAnonymous()
     .WithName("VerifyOrganisationEmail")
-    .Produces(StatusCodes.Status200OK, contentType: "text/html")
+    .Produces(StatusCodes.Status200OK)
     .Produces(StatusCodes.Status400BadRequest)
     .Produces(StatusCodes.Status404NotFound);
 
@@ -1094,6 +1137,42 @@ static string EscapeCsv(string? value)
     }
 
     return escapedValue;
+}
+
+static string CreateDownloadAccessLink(
+    string email,
+    DateTime nowUtc,
+    int tokenLifetimeHours,
+    string jwtIssuer,
+    string jwtAudience,
+    string jwtSigningKey,
+    string downloadAccessPurposeClaim,
+    string downloadBaseUrl)
+{
+    var expiresAt = nowUtc.AddHours(tokenLifetimeHours);
+    var claims = new[]
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, email),
+        new Claim(JwtRegisteredClaimNames.Email, email),
+        new Claim("purpose", downloadAccessPurposeClaim),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+    var signingCredentials = new SigningCredentials(
+        new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+        SecurityAlgorithms.HmacSha256);
+
+    var token = new JwtSecurityToken(
+        issuer: jwtIssuer,
+        audience: jwtAudience,
+        claims: claims,
+        notBefore: nowUtc,
+        expires: expiresAt,
+        signingCredentials: signingCredentials);
+
+    var tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
+    var downloadPageUrl = new Uri(new Uri(downloadBaseUrl), "download").ToString();
+    return $"{downloadPageUrl}?token={Uri.EscapeDataString(tokenValue)}";
 }
 
 static async Task<IResult?> ValidateUserAsync(User user, RegistrationDbContext db, Guid? currentUserId = null)

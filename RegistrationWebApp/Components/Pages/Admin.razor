@@ -39,7 +39,7 @@
                         <div class="text-danger mt-2">@passwordErrorMessage</div>
                     }
                     <button type="submit" class="btn btn-success rounded-pill pill-button mt-3" disabled="@IsButtonDisabled">Unlock Admin</button>
-                    @if (!string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]))
+                    @if (IsRecaptchaConfigured)
                     {
                         <div class="mt-2">
                             <Captcha    
@@ -409,7 +409,10 @@
     private string csvFilterDownloadType = string.Empty;
 
     private bool captchaVerified = false;
-    private bool IsButtonDisabled => !captchaVerified;
+    private bool IsRecaptchaConfigured =>
+        !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]) &&
+        !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SecretKey"]);
+    private bool IsButtonDisabled => IsRecaptchaConfigured && !captchaVerified;
 
     /// <summary>
     /// This property represents a member organisation that can be added through the admin interface.
