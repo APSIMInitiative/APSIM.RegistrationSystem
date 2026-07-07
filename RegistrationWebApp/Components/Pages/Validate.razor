@@ -40,6 +40,8 @@
         </div>
         
         <EditForm Model="@formdata" OnValidSubmit="() => OnCheckRegistration(formdata.emailInput)" class="text-center m-4 ">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger w-75 mx-auto text-start mt-2" />
             <div class="mb-3">
                 <input type="email"
                        class="form-control w-75 mx-auto"
@@ -53,6 +55,7 @@
                 {
                     <InputCheckbox class="form-check-input mt-3" type="checkbox" id="licenceAccepted" @bind-Value="formdata.LicenceAccepted" />
                     <label class="form-check-label mt-3" for="licenceAccepted">I have read and accept the licence terms</label>
+                    <ValidationMessage For="@(() => formdata.LicenceAccepted)" class="text-danger d-block mt-2" />
                 }
             </div>
             <button type="submit" class="btn btn-primary rounded-pill pill-button-primary" disabled="@IsButtonDisabled">Verify Email</button>
@@ -125,6 +128,7 @@
         [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
         public string emailInput { get; set; } = string.Empty;
 
+        [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept the licence terms before continuing.")]
         public bool LicenceAccepted { get; set; } = false;
     }
 
