@@ -1,0 +1,66 @@
+name: Run APSIM.RegistrationSystem Unit Tests
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore RegistrationSystem.sln
+
+      - name: Build All
+        run: dotnet build RegistrationSystem.sln --no-restore
+
+      - name: Run Tests
+        id: run_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet test Tests/Tests.csproj --no-build --logger "trx;LogFileName=test_results.trx" | tee test-output.txt
+
+      - name: Publish Test Summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Test Summary" >> "$GITHUB_STEP_SUMMARY"
+
+          summary_line=$(grep -E "^\s*Total tests:" test-output.txt | tail -n 1 || true)
+          if [ -n "$summary_line" ]; then
+            total=$(echo "$summary_line" | sed -E 's/.*Total tests: ([0-9]+).*/\1/')
+            passed=$(echo "$summary_line" | sed -E 's/.*Passed: ([0-9]+).*/\1/')
+            failed=$(echo "$summary_line" | sed -E 's/.*Failed: ([0-9]+).*/\1/')
+            skipped=$(echo "$summary_line" | sed -E 's/.*Skipped: ([0-9]+).*/\1/')
+            duration=$(echo "$summary_line" | sed -E 's/.*Duration: ([0-9]+[^.]*)\.?/\1/')
+
+            echo "| Total | Passed | Failed | Skipped | Duration |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ---: | ---: | ---: | ---: | --- |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| $total | $passed | $failed | $skipped | $duration |" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Raw summary: $summary_line" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No test summary line was found in dotnet output." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "${{ steps.run_tests.outcome }}" = "success" ]; then
+            echo "Result: Passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Result: Failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail workflow when tests fail
+        if: steps.run_tests.outcome != 'success'
+        run: exit 1
