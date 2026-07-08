@@ -264,30 +264,38 @@
                         <div class="member-org-panel h-100">
                             <h3>Add New Member Organisation</h3>
                             <EditForm Model="MemberOrganisation" OnValidSubmit="HandleNewMemberOrganisationSubmit">
-                                    <label for="organisationName" class="form-label">Organisation Name</label>
-                                    <InputText id="organisationName" class="form-control" @bind-Value="MemberOrganisation.Name" 
-                                        placeholder="Enter organisation name e.g. CSIRO" />
-                                    <InputSelect id="licencePathway" class="form-select mt-2" @bind-Value="MemberOrganisation.LicencePathway">
-                                        @foreach (var licencePathway in Enum.GetValues<LicencePathway>())
+                                <InputText id="contactName" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactName" 
+                                    placeholder="Name of contact person"></InputText>
+                                <InputText id="contactEmail" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactEmail" 
+                                    placeholder="Contact Persons Email Address"></InputText>
+                                <InputText id="contactAddress" class="form-control mt-2" @bind-Value="MemberOrganisation.ContactAddress" 
+                                    placeholder="Member Organisation Address"></InputText>
+                                <InputText id="organisationName" class="form-control mt-2" @bind-Value="MemberOrganisation.Name" 
+                                    placeholder="Enter organisation name e.g. CSIRO" />
+                                <InputSelect id="licencePathway" class="form-select mt-2" @bind-Value="MemberOrganisation.LicencePathway">
+                                    @foreach (var licencePathway in Enum.GetValues<LicencePathway>())
+                                    {
+                                        <option value="@licencePathway">@licencePathway.GetDescription()</option>
+                                    }
+                                </InputSelect>
+                                <InputSelect id="annualTurnover" class="form-select mt-2" @bind-Value="MemberOrganisation.AnnualTurnover">
+                                    @foreach (var annualTurnover in Enum.GetValues<AnnualTurnover>())
+                                    {
+                                        @if (annualTurnover.Equals(AnnualTurnover.NotApplicable))
                                         {
-                                            <option value="@licencePathway">@licencePathway.GetDescription()</option>
+                                            <option value="@annualTurnover" selected>@annualTurnover.GetDescription()</option>
                                         }
-                                    </InputSelect>
-                                    <InputSelect id="annualTurnover" class="form-select mt-2" @bind-Value="MemberOrganisation.AnnualTurnover">
-                                        <option value="@AnnualTurnover.BelowTwoMillion" selected>@AnnualTurnover.BelowTwoMillion.GetDescription()</option>
-                                        @foreach (var annualTurnover in Enum.GetValues<AnnualTurnover>())
-                                        {
-                                            <option value="@annualTurnover">@annualTurnover.GetDescription()</option>
-                                        }
-                                    </InputSelect>
-                                    <InputSelect id="licenceStatus" class="form-select mt-2" @bind-Value="MemberOrganisation.LicenceStatus">
-                                        <option value="@OrganisationLicenceStatus.Active" selected>@OrganisationLicenceStatus.Active.GetDescription()</option>
-                                        @foreach (var licenceStatus in Enum.GetValues<OrganisationLicenceStatus>())
-                                        {
-                                            <option value="@licenceStatus">@licenceStatus.GetDescription()</option>
-                                        }
-                                    </InputSelect>
-                                    <button type="submit" class="btn btn-success rounded-pill pill-button mt-4">Add Member Organisation</button>
+                                        <option value="@annualTurnover">@annualTurnover.GetDescription()</option>
+                                    }
+                                </InputSelect>
+                                <InputSelect id="licenceStatus" class="form-select mt-2" @bind-Value="MemberOrganisation.LicenceStatus">
+                                    <option value="@OrganisationLicenceStatus.Active" selected>@OrganisationLicenceStatus.Active.GetDescription()</option>
+                                    @foreach (var licenceStatus in Enum.GetValues<OrganisationLicenceStatus>())
+                                    {
+                                        <option value="@licenceStatus">@licenceStatus.GetDescription()</option>
+                                    }
+                                </InputSelect>
+                                <button type="submit" class="btn btn-success rounded-pill pill-button mt-4">Add Member Organisation</button>
                             </EditForm>
                         </div>
                     </div>
@@ -323,32 +331,32 @@
 
         <div class="manage-special-org-row row mt-4 mb-4 text-center">
             <div class="col-12">
-                <h2>Manage Special Licence Organisations</h2>
-                <p>Choose a special use organisation, edit its values, and submit updates to the API.</p>
+                <h2>Manage Organisations</h2>
+                <p>Choose an organisation, edit its values, and submit updates to the API.</p>
             </div>
             <div class="col-12">
                 <div class="member-org-panel text-start">
                     <label for="specialOrganisationSelector" class="form-label fw-semibold">Special Use Organisation</label>
-                    <select id="specialOrganisationSelector" class="form-select" value="@selectedSpecialOrganisationId" @onchange="OnSpecialOrganisationSelectionChanged">
+                    <select id="specialOrganisationSelector" class="form-select" value="@selectedOrganisationId" @onchange="OnOrganisationSelectionChanged">
                         <option value="">-- Select a special use organisation --</option>
-                        @foreach (var organisation in SpecialUseOrganisations)
+                        @foreach (var organisation in AllOrganisations)
                         {
                             <option value="@organisation.Id">@organisation.Name</option>
                         }
                     </select>
 
-                    @if (SpecialOrganisation is not null)
+                    @if (GenericOrganisation is not null)
                     {
-                        <EditForm Model="SpecialOrganisation" OnValidSubmit="HandleSpecialOrganisationSubmit" class="mt-4">
+                        <EditForm Model="GenericOrganisation" OnValidSubmit="HandleSpecialOrganisationSubmit" class="mt-4">
                             <label for="specialOrganisationName" class="form-label">Organisation Name</label>
-                            <InputText id="specialOrganisationName" class="form-control" @bind-Value="SpecialOrganisation.Name" placeholder="Organisation name" />
+                            <InputText id="specialOrganisationName" class="form-control" @bind-Value="GenericOrganisation.Name" placeholder="Organisation name" />
 
                             <label for="specialOrganisationEmails" class="form-label mt-3">Organisation Emails/Domains</label>
-                            <InputTextArea id="specialOrganisationEmails" class="form-control" rows="3" @bind-Value="specialOrganisationEmailsText" />
+                            <InputTextArea id="specialOrganisationEmails" class="form-control" rows="3" @bind-Value="organisationEmailsText" />
                             <div class="form-text">Use comma, semicolon, or newline separators (example: *@@domain.org).</div>
 
                             <label for="specialLicencePathway" class="form-label mt-2">Licence Pathway</label>
-                            <InputSelect id="specialLicencePathway" class="form-select" @bind-Value="SpecialOrganisation.LicencePathway">
+                            <InputSelect id="specialLicencePathway" class="form-select" @bind-Value="GenericOrganisation.LicencePathway">
                                 @foreach (var licencePathway in Enum.GetValues<LicencePathway>())
                                 {
                                     <option value="@licencePathway">@licencePathway.GetDescription()</option>
@@ -356,7 +364,7 @@
                             </InputSelect>
 
                             <label for="specialLicenceStatus" class="form-label mt-2">Licence Status</label>
-                            <InputSelect id="specialLicenceStatus" class="form-select" @bind-Value="SpecialOrganisation.LicenceStatus">
+                            <InputSelect id="specialLicenceStatus" class="form-select" @bind-Value="GenericOrganisation.LicenceStatus">
                                 @foreach (var licenceStatus in Enum.GetValues<OrganisationLicenceStatus>())
                                 {
                                     <option value="@licenceStatus">@licenceStatus.GetDescription()</option>
@@ -429,8 +437,9 @@
     };
 
     private Organisation? SpecialOrganisation { get; set; }
-    private string selectedSpecialOrganisationId = string.Empty;
-    private string specialOrganisationEmailsText = string.Empty;
+    private Organisation? GenericOrganisation { get; set; }
+    private string selectedOrganisationId = string.Empty;
+    private string organisationEmailsText = string.Empty;
 
     private List<User> users = new List<User>();
     private List<Organisation> organisations = new List<Organisation>();
@@ -455,6 +464,10 @@
 
     private List<Organisation> SpecialUseOrganisations => organisations
         .Where(o => o.LicencePathway == LicencePathway.TypeOne || o.LicencePathway == LicencePathway.TypeTwo)
+        .OrderBy(o => o.Name)
+        .ToList();
+
+    private List<Organisation> AllOrganisations => organisations
         .OrderBy(o => o.Name)
         .ToList();
 
@@ -495,8 +508,6 @@
             "Invalid licence pathway.Member organisations must have the 'APSIM Initiative Member' licence pathway.");
             return;
         }
-        List<string>emailsWildCard = new List<string>{ $"*@{MemberOrganisation.ContactEmail.Split('@').Last()}" };
-        MemberOrganisation.Emails = emailsWildCard;
         HttpResponseMessage response = await WebApiUtility.AddOrganisationAsync(MemberOrganisation);
         if (response.IsSuccessStatusCode)
         {
@@ -550,18 +561,18 @@
         users = await WebApiUtility.GetUsersAsync();
         organisations = await WebApiUtility.GetOrganisationsAsync();
 
-        if (!string.IsNullOrWhiteSpace(selectedSpecialOrganisationId))
+        if (!string.IsNullOrWhiteSpace(selectedOrganisationId))
         {
-            var selected = organisations.FirstOrDefault(o => o.Id.ToString() == selectedSpecialOrganisationId);
+            var selected = organisations.FirstOrDefault(o => o.Id.ToString() == selectedOrganisationId);
             SpecialOrganisation = selected is null ? null : CloneOrganisation(selected);
             if (selected is null)
             {
-                selectedSpecialOrganisationId = string.Empty;
-                specialOrganisationEmailsText = string.Empty;
+                selectedOrganisationId = string.Empty;
+                organisationEmailsText = string.Empty;
             }
             else
             {
-                specialOrganisationEmailsText = string.Join(Environment.NewLine, SpecialOrganisation!.Emails);
+                organisationEmailsText = string.Join(Environment.NewLine, SpecialOrganisation!.Emails);
             }
         }
 
@@ -690,14 +701,14 @@
         isModalOpen = true;
     }
 
-    private void OnSpecialOrganisationSelectionChanged(ChangeEventArgs e)
+    private void OnOrganisationSelectionChanged(ChangeEventArgs e)
     {
-        selectedSpecialOrganisationId = e.Value?.ToString() ?? string.Empty;
-        var selected = SpecialUseOrganisations.FirstOrDefault(o => o.Id.ToString() == selectedSpecialOrganisationId);
-        SpecialOrganisation = selected is null ? null : CloneOrganisation(selected);
-        specialOrganisationEmailsText = SpecialOrganisation is null
+        selectedOrganisationId = e.Value?.ToString() ?? string.Empty;
+        var selected = AllOrganisations.FirstOrDefault(o => o.Id.ToString() == selectedOrganisationId);
+        GenericOrganisation = selected is null ? null : CloneOrganisation(selected);
+        organisationEmailsText = GenericOrganisation is null
             ? string.Empty
-            : string.Join(Environment.NewLine, SpecialOrganisation.Emails);
+            : string.Join(Environment.NewLine, GenericOrganisation.Emails);
     }
 
     private static List<string> ParseOrganisationEmails(string emailsText)
@@ -731,29 +742,29 @@
 
     private async Task HandleSpecialOrganisationSubmit()
     {
-        if (SpecialOrganisation is null)
+        if (GenericOrganisation is null)
         {
             ShowModal("Error", "Please select a special use organisation to update.");
             return;
         }
 
-        SpecialOrganisation.Emails = ParseOrganisationEmails(specialOrganisationEmailsText);
-        if (SpecialOrganisation.Emails.Count == 0)
+        GenericOrganisation.Emails = ParseOrganisationEmails(organisationEmailsText);
+        if (GenericOrganisation.Emails.Count == 0)
         {
             ShowModal("Error", "At least one organisation email/domain is required.");
             return;
         }
 
-        HttpResponseMessage response = await WebApiUtility.UpdateOrganisationAsync(SpecialOrganisation);
+        HttpResponseMessage response = await WebApiUtility.UpdateOrganisationAsync(GenericOrganisation);
         if (response.IsSuccessStatusCode)
         {
-            ShowModal("Success", $"Organisation '{SpecialOrganisation.Name}' updated successfully.");
+            ShowModal("Success", $"Organisation '{GenericOrganisation.Name}' updated successfully.");
             await RefreshUsersAndOrganisationsAsync();
             return;
         }
 
-        Logger.LogError("Failed to update organisation {OrganisationId}. Status code: {StatusCode}", SpecialOrganisation.Id, response.StatusCode);
-        ShowModal("Error", $"Failed to update organisation '{SpecialOrganisation.Name}'. Status Code: {response.StatusCode}");
+        Logger.LogError("Failed to update organisation {OrganisationId}. Status code: {StatusCode}", GenericOrganisation.Id, response.StatusCode);
+        ShowModal("Error", $"Failed to update organisation '{GenericOrganisation.Name}'. Status Code: {response.StatusCode}");
     }
 
     private async Task HandleDeleteUser(User user)
