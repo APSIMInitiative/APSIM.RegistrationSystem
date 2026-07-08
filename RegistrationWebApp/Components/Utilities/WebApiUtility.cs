@@ -208,7 +208,9 @@ public partial class WebApiUtility
         response.EnsureSuccessStatusCode();
         string responseContent = await response.Content.ReadAsStringAsync();
         User? newUser = JsonSerializer.Deserialize<User>(responseContent, JsonOptions);
-        return new UserResponseModel { Message = "Registration successful.", User = newUser };
+        string messageString = "We've sent you a verification email. " +
+            "Click the link to download APSIM. If you don't see it, check your spam or junk folder.";
+        return new UserResponseModel { Message = messageString, User = newUser };
     }
 
     /// <summary>
