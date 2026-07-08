@@ -103,7 +103,23 @@
 
 @code
 {
-    private bool showModal = false;
+    private bool showModal
+    {
+        get => isModalOpen;
+        set
+        {
+            bool wasOpen = isModalOpen;
+            isModalOpen = value;
+
+            if (wasOpen && !value && redirectToHomeAfterModalClose)
+            {
+                redirectToHomeAfterModalClose = false;
+                NavigationManager.NavigateTo("/");
+            }
+        }
+    }
+    private bool isModalOpen = false;
+    private bool redirectToHomeAfterModalClose = false;
     private string modalMessage = string.Empty;
     private string modalTitle = string.Empty;
     private FormData formdata = new FormData();
@@ -182,7 +198,7 @@
             return;
         }
         Logger.LogInformation("Download link email sent to: {Email}", emailInput);
-        OpenModal("Email sent!", $"A download link has been sent to {emailInput}. Please check your inbox.");
+        OpenModal("Email sent!", $"We've sent you a download link email to {emailInput}. Click the link to download APSIM. If you don't see it, check your spam or junk folder.", redirectHomeOnClose: true);
     }
 
     private async Task OnEmailInputChanged()
@@ -279,8 +295,9 @@
         return new EmailAddressAttribute().IsValid(emailInput);
     }
 
-    private void OpenModal(string title, string message)
+    private void OpenModal(string title, string message, bool redirectHomeOnClose = false)
     {
+        redirectToHomeAfterModalClose = redirectHomeOnClose;
         modalTitle = title;
         modalMessage = message;
         showModal = true;
