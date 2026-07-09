@@ -5,8 +5,8 @@ namespace RegistrationWebAPI.Data;
 
 /// <summary>
 /// Represents a user registration in the system. 
-/// This class contains properties that store information about the user's contact details,
-/// licence status, and organisation affiliation.
+/// This class contains properties that store information about the user's contact details
+/// and licence status.
 public class UserEntity
 {
 /// <summary>
@@ -33,17 +33,6 @@ public class UserEntity
     /// This indicates whether the user has an active licence, is pending review, or has no licence.
     /// </summary>
     public UserLicenceStatus LicenceStatus { get; set; } = UserLicenceStatus.None;
-
-    /// <summary>
-    /// The unique identifier of the organisation the user belongs to.
-    /// This is an optional field and can be left empty.
-    /// </summary>
-    public Guid? OrganisationId { get; set; }
-
-    /// <summary>
-    /// Navigation property to the organisation the user belongs to.
-    /// </summary>
-    public OrganisationEntity? Organisation { get; set; }
 
     /// <summary>
     /// One-time token used to verify the user's email address.

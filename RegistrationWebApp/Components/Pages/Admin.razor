@@ -243,7 +243,7 @@
                                             <td>@string.Join(",", organisation.Emails )</td>
                                             <td>@organisation.LicencePathway.GetDescription()</td>
                                             <td>@organisation.DateCreated.ToShortDateString()</td>
-                                            <td>@organisation.Users.Count()</td>
+                                            <td>@CountRegisteredUsersForOrganisation(organisation)</td>
                                             <td>@organisation.LicenceStatus.GetDescription()</td>
                                         </tr>
                                     }
@@ -318,7 +318,7 @@
                                         <tr>
                                             <td>@memberOrg.Name</td>
                                             <td>@memberOrg.DateCreated.ToShortDateString()</td>
-                                            <td>@memberOrg.Users.Count()</td>
+                                            <td>@CountRegisteredUsersForOrganisation(memberOrg)</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -721,6 +721,11 @@
             .ToList();
     }
 
+    private int CountRegisteredUsersForOrganisation(Organisation organisation)
+    {
+        return users.Count(user => organisation.IsFromOrganisation(user.Email));
+    }
+
     private static Organisation CloneOrganisation(Organisation organisation)
     {
         return new Organisation
@@ -735,8 +740,7 @@
             ContactAddress = organisation.ContactAddress,
             LicencePathway = organisation.LicencePathway,
             AnnualTurnover = organisation.AnnualTurnover,
-            DateCreated = organisation.DateCreated,
-            Users = organisation.Users.ToList()
+            DateCreated = organisation.DateCreated
         };
     }
 

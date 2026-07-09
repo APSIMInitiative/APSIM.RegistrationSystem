@@ -5,7 +5,7 @@ namespace RegistrationShared.Models;
 
 /// <summary>
 /// Represents a user in the registration system. This class contains properties that store information about the user's email,
-/// organisation, licence status, and registration date.
+/// licence status, and registration date.
 /// </summary>
 public class User
 {
@@ -36,18 +36,12 @@ public class User
     public UserLicenceStatus LicenceStatus { get; set; } = UserLicenceStatus.None;
 
     /// <summary>
-    /// The unique identifier of the organisation the user belongs to.
-    /// This is an optional field and can be left empty.
-    /// </summary>
-    public Guid? OrganisationId { get; set; }
-
-    /// <summary>
-    /// Returns a string representation of the User object, including the email, organisation, licence status, and date created.
+    /// Returns a string representation of the User object, including the email, licence status, and date created.
     /// </summary>
     /// <returns>A string representation of the User object.</returns>
     public override string ToString()
     {
-        return $"User: {Email}, OrganisationId: {OrganisationId}, LicenceStatus: {LicenceStatus}, DateCreated: {DateCreated}";
+        return $"User: {Email}, LicenceStatus: {LicenceStatus}, DateCreated: {DateCreated}";
     }
 
 

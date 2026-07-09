@@ -81,13 +81,6 @@ public class Organisation
     public DateTime DateCreated { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// A list of users associated with the organisation. 
-    /// This can include staff members or other users who are linked to the 
-    /// organisation's licence and registration.
-    /// </summary>
-    public List<User> Users { get; set; } = new List<User>();
-
-    /// <summary>
     /// A string representation of the Organisation object, including the name, 
     /// contact information, licence status, licence pathway, 
     /// annual turnover, and date created.
@@ -103,7 +96,6 @@ public class Organisation
         $"LicenceStatus: {LicenceStatus}, " +
         $"LicencePathway: {LicencePathway}, " +
         $"AnnualTurnover: {AnnualTurnover}, " +
-        $"OrganisationUsers: {Users.Count}, " +
         $"DateCreated: {DateCreated}";
     }
 

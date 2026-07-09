@@ -668,7 +668,6 @@ users.MapPut("/{id:guid}", async (Guid id, User user, RegistrationDbContext db) 
 
     entity.Email = user.Email.Trim();
     entity.LicenceStatus = user.LicenceStatus;
-    entity.OrganisationId = user.OrganisationId;
 
     await db.SaveChangesAsync();
 
@@ -752,7 +751,6 @@ organisations.MapGet("/", async (RegistrationDbContext db) =>
 {
     var entities = await db.Organisations
         .AsNoTracking()
-        .Include(x => x.Users)
         .OrderBy(x => x.Name)
         .ToListAsync();
 
@@ -765,7 +763,6 @@ organisations.MapGet("/{id:guid}", async (Guid id, RegistrationDbContext db) =>
 {
     var entity = await db.Organisations
         .AsNoTracking()
-        .Include(x => x.Users)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     return entity is null ? Results.NotFound() : Results.Ok(ToOrganisationModel(entity));
@@ -851,7 +848,6 @@ organisations.MapPost("/", async (Organisation organisation, RegistrationDbConte
 organisations.MapPut("/{id:guid}", async (Guid id, Organisation organisation, RegistrationDbContext db) =>
 {
     var entity = await db.Organisations
-        .Include(x => x.Users)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     if (entity is null)
@@ -886,12 +882,6 @@ organisations.MapDelete("/{id:guid}", async (Guid id, RegistrationDbContext db) 
     if (entity is null)
     {
         return Results.NotFound();
-    }
-
-    var hasUsers = await db.Users.AnyAsync(x => x.OrganisationId == id);
-    if (hasUsers)
-    {
-        return Results.Conflict("Cannot delete organisation while users are linked to it.");
     }
 
     db.Organisations.Remove(entity);
@@ -1050,8 +1040,7 @@ static User ToUserModel(UserEntity entity) =>
         Id = entity.Id,
         Email = entity.Email,
         DateCreated = entity.DateCreated,
-        LicenceStatus = entity.LicenceStatus,
-        OrganisationId = entity.OrganisationId
+        LicenceStatus = entity.LicenceStatus
     };
 
 static UserEntity ToUserEntity(User model) =>
@@ -1060,8 +1049,7 @@ static UserEntity ToUserEntity(User model) =>
         Id = model.Id,
         Email = model.Email.Trim(),
         DateCreated = model.DateCreated,
-        LicenceStatus = model.LicenceStatus,
-        OrganisationId = model.OrganisationId
+        LicenceStatus = model.LicenceStatus
     };
 
 static Organisation ToOrganisationModel(OrganisationEntity entity) =>
@@ -1072,8 +1060,7 @@ static Organisation ToOrganisationModel(OrganisationEntity entity) =>
         Emails = entity.Emails,
         LicenceStatus = entity.LicenceStatus,
         LicencePathway = entity.LicencePathway,
-        DateCreated = entity.DateCreated,
-        Users = entity.Users.Select(ToUserModel).ToList()
+        DateCreated = entity.DateCreated
     };
 
 static OrganisationEntity ToOrganisationEntity(Organisation model) =>
@@ -1084,8 +1071,7 @@ static OrganisationEntity ToOrganisationEntity(Organisation model) =>
         Emails = model.Emails.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
         LicenceStatus = model.LicenceStatus,
         LicencePathway = model.LicencePathway,
-        DateCreated = model.DateCreated,
-        Users = model.Users.Select(ToUserEntity).ToList()
+        DateCreated = model.DateCreated
     };
 
 static DownloadAuditResponse ToDownloadAuditResponse(DownloadAuditEntity entity) =>
@@ -1206,18 +1192,6 @@ static async Task<IResult?> ValidateUserAsync(User user, RegistrationDbContext d
     if (duplicateEmail)
     {
         return Results.Conflict("A user with the same email already exists.");
-    }
-
-    if (user.OrganisationId.HasValue)
-    {
-        var organisationExists = await db.Organisations.AnyAsync(x => x.Id == user.OrganisationId);
-        if (!organisationExists)
-        {
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["organisationId"] = ["Organisation does not exist."]
-            });
-        }
     }
 
     return null;

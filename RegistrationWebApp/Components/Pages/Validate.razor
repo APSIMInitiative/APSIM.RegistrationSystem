@@ -170,24 +170,6 @@
         if (!downloadLinkEmailSent)
         {
             Logger.LogInformation("No user found for email: {Email}. Registering new user...", emailInput);
-            List<Organisation> organisations = await WebApiUtility.GetOrganisationsAsync();
-            foreach (Organisation org in organisations)
-            {
-                if(org.IsFromOrganisation(emailInput))
-                {
-                    Logger.LogInformation("Email: {Email} is associated with organisation: {Organisation}. Registering with special use licence.", emailInput, org.Name);
-                    User newSpecialUser = new User
-                    {
-                        Email = emailInput,
-                        DateCreated = DateTime.UtcNow,
-                        OrganisationId = org.Id
-                    };
-                    UserResponseModel newSpecialUserResponse = await WebApiUtility.CreateUserAsync(newSpecialUser);        
-                    OpenModal("Registration Complete", newSpecialUserResponse.Message);
-                    return;
-                }
-            }
-
             User newUser = new User
             {
                 Email = emailInput,

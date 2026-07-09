@@ -401,22 +401,6 @@ public sealed class TestRegistrationWebAPI : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
     }
 
-    [Fact]
-    public async Task DeleteOrganisation_ReturnsConflict_WhenUsersLinked()
-    {
-        var org = NewOrganisation("LinkedOrg");
-        var orgResponse = await client.PostAsJsonAsync("/api/organisations", org);
-        var createdOrg = await orgResponse.Content.ReadFromJsonAsync<Organisation>();
-        Assert.NotNull(createdOrg);
-
-        var user = new User { Email = "linked@example.com", OrganisationId = createdOrg.Id };
-        var userResponse = await client.PostAsJsonAsync("/api/users", user);
-        Assert.Equal(HttpStatusCode.Created, userResponse.StatusCode);
-
-        var deleteResponse = await client.DeleteAsync($"/api/organisations/{createdOrg.Id}");
-        Assert.Equal(HttpStatusCode.Conflict, deleteResponse.StatusCode);
-    }
-
     // -------------------------------------------------------------------------
     // Auth / Health
     // -------------------------------------------------------------------------

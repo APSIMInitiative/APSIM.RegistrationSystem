@@ -41,13 +41,6 @@ public class OrganisationEntity
     public DateTime DateCreated { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// A list of users associated with the organisation. 
-    /// This can include staff members or other users who are linked to the 
-    /// organisation's licence and registration.
-    /// </summary>
-    public List<UserEntity> Users { get; set; } = new List<UserEntity>();
-
-    /// <summary>
     /// One-time token used to verify the organisation contact email.
     /// </summary>
     public string? EmailVerificationToken { get; set; }
