@@ -9,7 +9,7 @@
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/download"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject ILogger<Download> Logger
 @inject NavigationManager NavigationManager
 @inject WebApiUtility WebApiUtility
@@ -19,108 +19,115 @@
 
 <PageTitle>Download</PageTitle>
 
-<div class="row">
-    <div class="download-page-card col-6 offset-3">
-        <h1 class="text-center m-3">Downloads</h1>
-        <p class="download-lead text-center m-3">
-            Access to this page is provided via your secure download link.
-        </p>
-
-        @if (isTokenValidationInProgress)
-        {
-            <p class="text-center">Validating your download link...</p>
-            <div id="download-spinner" class="text-center">
+@if (isTokenValidationInProgress)
+{
+    <div class="row">
+        <div class="download-page-card col-6 offset-3">
+            <p class="text-center mt-4">Validating your download link...</p>
+            <div id="download-spinner" class="text-center mb-4">
                 <div class="spinner-border text-success text-center" style="width: 8rem; height: 8rem;" role="status"></div>
             </div>
-        }
-        else if (!hasValidToken)
-        {
-            <div class="alert alert-warning text-center" role="alert">
-                <p>Your download link is invalid or has expired. Please request a new link.</p>
-            </div>
-            <div class="text-center">
-                <a href="/" class="btn btn-success pill-button">Go back to the homepage</a>
-            </div>
-        }
-        else
-        {
-            <div class="download-results">
-                <h2>APSIM Product Downloads</h2>
-                <select class="form-select download-select" aria-label="Select download type" value="@selectedDownloadType" @onchange="OnDownloadTypeChanged">
-                    <option value="nextgen">APSIM Next Generation Downloads</option>
-                    <option value="classic">APSIM Classic (7.10) Downloads</option>
-                </select>
-
-            @if (isSelectionLoading)
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="download-page-card col-6 offset-3">
+            @if (!hasValidToken)
             {
-                <p class="text-center mt-3">Loading downloads...</p>
-                <div class="text-center">
-                    <div class="spinner-border text-success" role="status"></div>
+                <div class="alert alert-warning text-center" role="alert">
+                    <p>Your download link is invalid or has expired. Please request a new link.</p>
                 </div>
-            }
-            else if (selectedDownloadType == "nextgen" && NextGenDownloadInfos.Count > 0)
-
-            {
-                @foreach (var downloadInfo in NextGenDownloadInfos)
-                {
-                    <div class="row mt-3 download-item-card">
-                        <div class="download-item-details col-9">
-                            <h3>Version: @downloadInfo.Revision</h3>
-                            <p><strong>Release Date:</strong> @downloadInfo.ReleaseDate.ToShortDateString()</p>
-                            <p><strong>Description:</strong> @downloadInfo.Title</p>
-                            <p><strong>Version:</strong> @downloadInfo.Version</p>
-                            <p><strong>GitHub Issue:</strong> <a href="@GetNextGenIssueLink(downloadInfo.Issue)" target="_blank">@downloadInfo.Issue</a></p>
-                        </div>
-
-                        <div class="download-actions col-3 g-3">
-                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkWindows, "windows")'>
-                                <span class="os-icon os-icon-windows" aria-hidden="true"></span>Download for Windows
-                            </button>
-                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkMacOS, "macos")'>
-                                <span class="os-icon os-icon-macos" aria-hidden="true"></span>Download for MacOS
-                            </button>
-                            <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkDebian, "linux-debian")'>
-                                <span class="os-icon os-icon-linux" aria-hidden="true"></span>Download for Linux (Debian)
-                            </button>
-                        </div>
-                    </div>
-                }
-            }
-            else if (selectedDownloadType == "classic" && ClassicDownloadInfos.Count > 0)
-            {
-                @foreach (var classicInfo in ClassicDownloadInfos)
-                {
-                    <div class="row mt-3 download-item-card">
-                        <div class="download-item-details col-9">
-                            <h3>Revision: @(classicInfo.RevisionNumber?.ToString() ?? "N/A")</h3>
-                            <p><strong>Date:</strong> @((classicInfo.FinishTime ?? classicInfo.StartTime)?.ToShortDateString() ?? "N/A")</p>
-                            <p><strong>Description:</strong> @classicInfo.Title</p>
-                            <p><strong>Author:</strong> @classicInfo.Author</p>
-                            <p><strong>GitHub Issue:</strong> <a href="@GetClassicIssueLink(classicInfo.BugID)" target="_blank" rel="noopener noreferrer">@classicInfo.BugID</a></p>
-                        </div>
-
-                        <div class="download-actions col-3 g-3">
-                            @if (classicInfo.RevisionNumber is int revision)
-                            {
-                                <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OnClassicDownloadClicked(classicInfo, revision)">
-                                    <span class="os-icon os-icon-windows" aria-hidden="true"></span>Download APSIM Classic
-                                </button>
-                            }
-                            <button type="button" class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(GetClassicIssueLink(classicInfo.BugID))">
-                                <span class="os-icon os-icon-github" aria-hidden="true"></span>More Info
-                            </button>
-                        </div>
-                    </div>
-                }
+                <div class="text-center">
+                    <a href="/" class="btn btn-success pill-button">Go back to the homepage</a>
+                </div>
             }
             else
             {
-                <p class="text-center mt-3">No downloads are currently available for this selection.</p>
+                <h1 class="text-center m-3">Downloads</h1>
+                <p class="download-lead text-center m-3">
+                    Access to this page is provided via your secure download link.
+                </p>
+
+                <div class="download-results">
+                    <h2>APSIM Product Downloads</h2>
+                    <select class="form-select download-select" aria-label="Select download type" value="@selectedDownloadType" @onchange="OnDownloadTypeChanged">
+                        <option value="nextgen">APSIM Next Generation Downloads</option>
+                        <option value="classic">APSIM Classic (7.10) Downloads</option>
+                    </select>
+
+                @if (isSelectionLoading)
+                {
+                    <p class="text-center mt-3">Loading downloads...</p>
+                    <div class="text-center">
+                        <div class="spinner-border text-success" role="status"></div>
+                    </div>
+                }
+                else if (selectedDownloadType == "nextgen" && NextGenDownloadInfos.Count > 0)
+
+                {
+                    @foreach (var downloadInfo in NextGenDownloadInfos)
+                    {
+                        <div class="row mt-3 download-item-card">
+                            <div class="download-item-details col-9">
+                                <h3>Version: @downloadInfo.Revision</h3>
+                                <p><strong>Release Date:</strong> @downloadInfo.ReleaseDate.ToShortDateString()</p>
+                                <p><strong>Description:</strong> @downloadInfo.Title</p>
+                                <p><strong>Version:</strong> @downloadInfo.Version</p>
+                                <p><strong>GitHub Issue:</strong> <a href="@GetNextGenIssueLink(downloadInfo.Issue)" target="_blank">@downloadInfo.Issue</a></p>
+                            </div>
+
+                            <div class="download-actions col-3 g-3">
+                                <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkWindows, "windows")'>
+                                    <span class="os-icon os-icon-windows" aria-hidden="true"></span>Download for Windows
+                                </button>
+                                <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkMacOS, "macos")'>
+                                    <span class="os-icon os-icon-macos" aria-hidden="true"></span>Download for MacOS
+                                </button>
+                                <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick='() => OnNextGenDownloadClicked(downloadInfo, downloadInfo.DownloadLinkDebian, "linux-debian")'>
+                                    <span class="os-icon os-icon-linux" aria-hidden="true"></span>Download for Linux (Debian)
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else if (selectedDownloadType == "classic" && ClassicDownloadInfos.Count > 0)
+                {
+                    @foreach (var classicInfo in ClassicDownloadInfos)
+                    {
+                        <div class="row mt-3 download-item-card">
+                            <div class="download-item-details col-9">
+                                <h3>Revision: @(classicInfo.RevisionNumber?.ToString() ?? "N/A")</h3>
+                                <p><strong>Date:</strong> @((classicInfo.FinishTime ?? classicInfo.StartTime)?.ToShortDateString() ?? "N/A")</p>
+                                <p><strong>Description:</strong> @classicInfo.Title</p>
+                                <p><strong>Author:</strong> @classicInfo.Author</p>
+                                <p><strong>GitHub Issue:</strong> <a href="@GetClassicIssueLink(classicInfo.BugID)" target="_blank" rel="noopener noreferrer">@classicInfo.BugID</a></p>
+                            </div>
+
+                            <div class="download-actions col-3 g-3">
+                                @if (classicInfo.RevisionNumber is int revision)
+                                {
+                                    <button class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OnClassicDownloadClicked(classicInfo, revision)">
+                                        <span class="os-icon os-icon-windows" aria-hidden="true"></span>Download APSIM Classic
+                                    </button>
+                                }
+                                <button type="button" class="btn btn-primary pill-button-primary w-100 mb-2" @onclick="() => OpenInNewTab(GetClassicIssueLink(classicInfo.BugID))">
+                                    <span class="os-icon os-icon-github" aria-hidden="true"></span>More Info
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-center mt-3">No downloads are currently available for this selection.</p>
+                }
+                </div>
             }
-            </div>
-        }
+        </div>
     </div>
-</div>
+}
 
 <CustomModal Title="@modalTitle" @bind-IsOpen="showModal">
     @modalMessage
