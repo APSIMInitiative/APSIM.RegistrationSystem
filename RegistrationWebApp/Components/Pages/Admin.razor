@@ -336,7 +336,7 @@
             </div>
             <div class="col-12">
                 <div class="member-org-panel text-start">
-                    <label for="specialOrganisationSelector" class="form-label fw-semibold">Special Use Organisation</label>
+                    <label for="specialOrganisationSelector" class="form-label fw-semibold">Organisation Name</label>
                     <select id="specialOrganisationSelector" class="form-select" value="@selectedOrganisationId" @onchange="OnOrganisationSelectionChanged">
                         <option value="">-- Select a special use organisation --</option>
                         @foreach (var organisation in AllOrganisations)
@@ -372,7 +372,7 @@
                             </InputSelect>
 
                             <div>
-                                <button type="submit" class="btn btn-success rounded-pill pill-button mt-3">Update Special Organisation</button>
+                                <button type="submit" class="btn btn-success rounded-pill pill-button mt-3">Update Organisation</button>
                             </div>
 
                         </EditForm>
