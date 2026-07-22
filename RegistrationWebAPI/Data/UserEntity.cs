@@ -35,6 +35,11 @@ public class UserEntity
     public UserLicenceStatus LicenceStatus { get; set; } = UserLicenceStatus.None;
 
     /// <summary>
+    /// The country name of the user at the time of registration.
+    /// </summary>
+    public string Country { get; set;} = string.Empty;
+
+    /// <summary>
     /// One-time token used to verify the user's email address.
     /// </summary>
     public string? EmailVerificationToken { get; set; }

@@ -36,6 +36,11 @@ public class User
     public UserLicenceStatus LicenceStatus { get; set; } = UserLicenceStatus.None;
 
     /// <summary>
+    /// The country of the user at the time of registration.
+    /// </summary>
+    public string Country {get; set;} = string.Empty;
+
+    /// <summary>
     /// Returns a string representation of the User object, including the email, licence status, and date created.
     /// </summary>
     /// <returns>A string representation of the User object.</returns>

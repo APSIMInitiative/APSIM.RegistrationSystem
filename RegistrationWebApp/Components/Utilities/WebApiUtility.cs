@@ -555,4 +555,31 @@ public partial class WebApiUtility
         return memberOrgNames.Concat(specialUseOrgNames).ToList();
     }
 
+    /// <summary>
+    /// Gets the country string for a provided IP Address.
+    /// </summary>
+    /// <param name="ipaddress"></param>
+    /// <returns>The name of a country</returns>
+    /// <exception cref="InvalidDataException"></exception>
+    public async Task<string> GetCountryNameFromIPAddress(string ipaddress)
+    {
+        string defaultCountryName = "unavailable";
+        if (string.IsNullOrEmpty(ipaddress))
+            throw new InvalidDataException("Error: An empty IP address was provided.");
+        // Query the IPInfo API.
+        HttpClient outsideClient = new();
+        string url = $"https://api.ipinfo.io/lite/{ipaddress}";
+        using HttpRequestMessage request = new(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "4640501e1e3c57");
+        using HttpResponseMessage response = await outsideClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        string jsonString = await response.Content.ReadAsStringAsync();
+        Dictionary<string,object> ipInfoContent = JsonSerializer.Deserialize<Dictionary<string,object>>(jsonString) ?? 
+            new Dictionary<string, object>();
+
+        if (ipInfoContent.TryGetValue("country", out object? value))
+            return value.ToString() ?? defaultCountryName;
+        else return defaultCountryName;
+    }
+
 }

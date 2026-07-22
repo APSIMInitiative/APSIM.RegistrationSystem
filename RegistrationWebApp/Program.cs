@@ -11,7 +11,7 @@ builder.Services.AddSingleton<WebApiUtility>();
 builder.Services.AddScoped<DownloadAccessState>();
 builder.Services.AddHttpClient<APSIMBuildsAPIUtility>();
 builder.Services.AddSingleton<CaptchaService>();
-
+builder.Services.AddHttpContextAccessor();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

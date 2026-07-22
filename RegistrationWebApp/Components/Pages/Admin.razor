@@ -190,6 +190,7 @@
                                     <th>Email</th>
                                     <th>Licence Status</th>
                                     <th>Date Created</th>
+                                    <th>Country</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -201,6 +202,7 @@
                                         <td>@registration.Email</td>
                                         <td>@registration.LicenceStatus.GetDescription()</td>
                                         <td>@registration.DateCreated.ToShortDateString()</td>
+                                        <td>@registration.Country</td>
                                         <td>
                                             <button class="btn btn-sm btn-danger"
                                                     @onclick="() => HandleDeleteUser(registration)">
