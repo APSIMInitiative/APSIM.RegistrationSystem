@@ -1,14 +1,15 @@
-@using RegistrationShared.Models
-@using RegistrationShared.Enums
-@using RegistrationWebApp.Components.Classes.Utilities
-@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
-@using RegistrationWebApp.Components.Layout.CustomLayout
-@using RegistrationWebApp.Components.Utilities
-@using RegistrationWebApp.Components.Utilities.Models
-@using Microsoft.JSInterop
+@using System.Globalization
+@using BlazoredGoogleCaptcha
 @using BlazoredGoogleCaptcha.Responses
 @using BlazoredGoogleCaptcha.Services
-@using BlazoredGoogleCaptcha
+@using Microsoft.JSInterop
+@using RegistrationShared.Enums
+@using RegistrationShared.Models
+@using RegistrationWebApp.Components.Classes.Utilities
+@using RegistrationWebApp.Components.Layout.CustomLayout
+@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+@using RegistrationWebApp.Components.Utilities
+@using RegistrationWebApp.Components.Utilities.Models
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/admin/"
@@ -201,7 +202,7 @@
                                     <tr>
                                         <td>@registration.Email</td>
                                         <td>@registration.LicenceStatus.GetDescription()</td>
-                                        <td>@registration.DateCreated.ToShortDateString()</td>
+                                        <td>@registration.DateCreated.ToString("d", CultureInfo.GetCultureInfo("en-AU"))</td>
                                         <td>@registration.Country</td>
                                         <td>
                                             <button class="btn btn-sm btn-danger"
@@ -244,7 +245,7 @@
                                             <td>@organisation.Name</td>
                                             <td>@string.Join(",", organisation.Emails )</td>
                                             <td>@organisation.LicencePathway.GetDescription()</td>
-                                            <td>@organisation.DateCreated.ToShortDateString()</td>
+                                            <td>@organisation.DateCreated.ToString("d", CultureInfo.GetCultureInfo("en-AU"))</td>
                                             <td>@CountRegisteredUsersForOrganisation(organisation)</td>
                                             <td>@organisation.LicenceStatus.GetDescription()</td>
                                         </tr>
@@ -319,7 +320,7 @@
                                     {
                                         <tr>
                                             <td>@memberOrg.Name</td>
-                                            <td>@memberOrg.DateCreated.ToShortDateString()</td>
+                                            <td>@memberOrg.DateCreated.ToString("d", CultureInfo.GetCultureInfo("en-AU"))</td>
                                             <td>@CountRegisteredUsersForOrganisation(memberOrg)</td>
                                         </tr>
                                     }
