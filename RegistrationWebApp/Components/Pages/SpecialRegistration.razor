@@ -69,7 +69,15 @@
                             <option value="@OrganisationLicenceStatus.Pending" selected disabled>@OrganisationLicenceStatus.Pending.GetDescription()</option>
                         </InputSelect >
 
-                        <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
+                        @if (Type == "1")
+                        {
+                            <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
+                        }
+
+                        @if (Type == "2")
+                        {
+                            <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence_Type_2.pdf"/>
+                        }
                     </div>
 
                     <p class="mb-2"><strong>Once submitted you'll receive an email asking you to verify your email address before proceeding.</strong></p>
