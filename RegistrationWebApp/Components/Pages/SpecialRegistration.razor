@@ -1,17 +1,18 @@
-@using RegistrationShared.Models
-@using RegistrationShared.Enums
-@using RegistrationWebApp.Components.Layout.CustomLayout;
-@using RegistrationWebApp.Components.Classes.Utilities;
-@using System.Runtime.CompilerServices
+@using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.Eventing.Reader
-@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
-@using RegistrationWebApp.Components.Utilities
-@using RegistrationWebApp.Components.Classes;
-@using Microsoft.Extensions.Logging
-@using RegistrationWebApp.Components.Utilities.Models
+@using System.Runtime.CompilerServices
+@using BlazoredGoogleCaptcha
 @using BlazoredGoogleCaptcha.Responses
 @using BlazoredGoogleCaptcha.Services
-@using BlazoredGoogleCaptcha
+@using Microsoft.Extensions.Logging
+@using RegistrationShared.Enums
+@using RegistrationShared.Models
+@using RegistrationWebApp.Components.Classes
+@using RegistrationWebApp.Components.Classes.Utilities;
+@using RegistrationWebApp.Components.Layout.CustomLayout;
+@using RegistrationWebApp.Components.Layout.CustomLayout.BootstrapHelpers
+@using RegistrationWebApp.Components.Utilities
+@using RegistrationWebApp.Components.Utilities.Models
 
 @namespace RegistrationWebApp.Components.Pages
 @page "/special-registration"
@@ -31,21 +32,21 @@
         <div class="special-use-licence-choice-row row mt-4">
             <div class="special-use-col col-md-6 offset-md-3 mb-4">
                 <h3 class="text-center mb-3">Special Use Registration</h3>
-                <EditForm Model="@organisation" OnValidSubmit="ShowConfirmModal" FormName="specialUseRegistrationForm">
+                <EditForm Model="@formOrganisation" OnValidSubmit="ShowConfirmModal" FormName="specialUseRegistrationForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
                     <div class="special-use-form-row row mb-3">
-                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Email" @bind-Value="organisation!.ContactEmail" />
-                        <ValidationMessage For="@(() => organisation.ContactEmail)" />
-                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Name" @bind-Value="organisation!.ContactName" />
-                        <ValidationMessage For="@(() => organisation.ContactName)" />
-                        <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="organisation!.ContactPhone" />
-                        <ValidationMessage For="@(() => organisation.ContactPhone)" />
-                        <InputText class="form-control mb-2" Placeholder="*Organisation Name" @bind-Value="organisation!.Name" />
-                        <ValidationMessage For="@(() => organisation.Name)" />
-                        <InputText class="form-control mb-2" Placeholder="*Organisation Address" @bind-Value="organisation!.ContactAddress" />
-                        <ValidationMessage For="@(() => organisation.ContactAddress)" />
-                        <InputSelect class="form-control mb-2" hidden @bind-Value="organisation!.LicencePathway">
+                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Email" @bind-Value="formOrganisation!.ContactEmail" />
+                        <ValidationMessage For="@(() => formOrganisation.ContactEmail)" />
+                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Name" @bind-Value="formOrganisation!.ContactName" />
+                        <ValidationMessage For="@(() => formOrganisation.ContactName)" />
+                        <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="formOrganisation!.ContactPhone" />
+                        <ValidationMessage For="@(() => formOrganisation.ContactPhone)" />
+                        <InputText class="form-control mb-2" Placeholder="*Organisation Name" @bind-Value="formOrganisation!.Name" />
+                        <ValidationMessage For="@(() => formOrganisation.Name)" />
+                        <InputText class="form-control mb-2" Placeholder="*Organisation Address" @bind-Value="formOrganisation!.ContactAddress" />
+                        <ValidationMessage For="@(() => formOrganisation.ContactAddress)" />
+                        <InputSelect class="form-control mb-2" hidden @bind-Value="formOrganisation!.LicencePathway">
                             <option value=""disabled>-- Select Licence Pathway --</option>
                             @if (Type == "1")
                             {
@@ -58,29 +59,30 @@
                                 <option value="@LicencePathway.TypeTwo" disabled selected>@LicencePathway.TypeTwo.GetDescription()</option>
                             }
                         </InputSelect >
-                        <InputSelect class="form-control mb-2" @bind-Value="organisation!.AnnualTurnover">
+                        <InputSelect class="form-control mb-2" @bind-Value="formOrganisation!.AnnualTurnover">
                             @foreach (var annualTurnover in Enum.GetValues<AnnualTurnover>())
                             {
                                 <option value="@annualTurnover">@annualTurnover.GetDescription()</option>
                             }
                             <option value="" selected disabled>*-- Select Annual Turnover Range --</option>
                         </InputSelect >
-                        <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="organisation!.LicenceStatus">
+                        <InputSelect class="form-control mb-2 mt-2" hidden @bind-Value="formOrganisation!.LicenceStatus">
                             <option value="@OrganisationLicenceStatus.Pending" selected disabled>@OrganisationLicenceStatus.Pending.GetDescription()</option>
                         </InputSelect >
 
-                        @if (Type == "1")
-                        {
-                            <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence.pdf"/>
-                        }
 
-                        @if (Type == "2")
-                        {
-                            <PdfViewer PdfUrl="/Documents/APSIM_Special_Use_Licence_Type_2.pdf"/>
-                        }
+                        <PdfViewer PdfUrl=@licenceDocumentPath />
+                        <ValidationMessage For="@(() => formOrganisation.AcceptedTerms)" />
+                        <label class="form-check-label" for="acceptTerms"> 
+                            By ticking this box, you confirm that you have read, understood and agree to be bound by the terms and conditions of the applicable APSIM license agreement
+                        </Label>
+                        <InputCheckbox class="form-check mb-2 mt-2 fw-bold" @bind-Value="formOrganisation!.AcceptedTerms" id="acceptTerms"></InputCheckbox>
+
                     </div>
 
                     <p class="mb-2"><strong>Once submitted you'll receive an email asking you to verify your email address before proceeding.</strong></p>
+
+
 
                     <p class="mb-2">
                         <em>Please note that final licence classification is confirmed by the APSIM Initiative.</em>
@@ -141,8 +143,13 @@
 
 @code
 {
-    private string? Type { get; set; }
-    private Organisation organisation { get; set; } = new();
+    [Parameter]    
+    [SupplyParameterFromQuery]
+    public string? Type { get; set; }
+
+    [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept the terms.")]
+    public bool AcceptTerms { get; set;}
+    private FormOrganisation formOrganisation { get; set; } = new();
     private Organisation? pendingOrganisation;
     private bool showModal
     {
@@ -170,6 +177,11 @@
         !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SecretKey"]);
     private bool IsButtonDisabled => IsRecaptchaConfigured && !captchaVerified;
 
+    private string typeOneLicencePath =  "/Documents/APSIM_Special_Use_Licence.pdf";
+    private string typeTwoLicencePath = "/Documents/APSIM_Special_Use_Licence_Type_2.pdf";
+    private string licenceDocumentPath => Type == "1" ?  typeOneLicencePath : 
+        typeTwoLicencePath;
+
     /// <summary>
     /// Submits an Organisation application to the web API and shows a modal
     /// </summary>
@@ -190,7 +202,7 @@
                 string title = "Registration Submitted For Review";
                 redirectToHomeAfterModalClose = true;
                 OpenModal(message, title);
-                this.organisation = new Organisation(); // Clear the form
+                this.formOrganisation = new FormOrganisation(); // Clear the form
             }
             else
             {
@@ -219,14 +231,14 @@
     {
         pendingOrganisation = new Organisation
         {
-            Name = organisation.Name,
-            ContactName = organisation.ContactName,
-            ContactEmail = organisation.ContactEmail,
-            ContactPhone = organisation.ContactPhone,
-            ContactAddress = organisation.ContactAddress,
-            LicencePathway = organisation.LicencePathway,
-            AnnualTurnover = organisation.AnnualTurnover,
-            LicenceStatus = organisation.LicenceStatus
+            Name = formOrganisation.Name,
+            ContactName = formOrganisation.ContactName,
+            ContactEmail = formOrganisation.ContactEmail,
+            ContactPhone = formOrganisation.ContactPhone,
+            ContactAddress = formOrganisation.ContactAddress,
+            LicencePathway = formOrganisation.LicencePathway,
+            AnnualTurnover = formOrganisation.AnnualTurnover,
+            LicenceStatus = formOrganisation.LicenceStatus
         };
         showConfirmModal = true;
     }
