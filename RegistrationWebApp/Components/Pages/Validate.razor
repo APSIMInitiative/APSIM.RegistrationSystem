@@ -40,7 +40,6 @@
         
         <EditForm Model="@formdata" OnValidSubmit="() => OnCheckRegistration(formdata.emailInput)" class="text-center m-4 ">
             <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger w-75 mx-auto text-start mt-2" />
             <div class="mb-3">
                 <input type="email"
                        class="form-control w-75 mx-auto"
@@ -52,8 +51,10 @@
                        required>
                 @if (!GeneralHiddenState || !SpecialHiddenState)
                 {
-                    <InputCheckbox class="form-check-input mt-3" type="checkbox" id="licenceAccepted" @bind-Value="formdata.LicenceAccepted" />
-                    <label class="form-check-label mt-3" for="licenceAccepted">I have read and accept the licence terms</label>
+                    <label class="form-check-label mt-3" for="licenceAccepted">
+                        By ticking this box, you confirm that you have read, understood and agree to be bound by the terms and conditions of the applicable APSIM license agreement.
+                    </label>
+                    <InputCheckbox class="form-check mt-3" type="checkbox" id="licenceAccepted" @bind-Value="formdata.LicenceAccepted" />
                     <ValidationMessage For="@(() => formdata.LicenceAccepted)" class="text-danger d-block mt-2" />
                 }
             </div>
