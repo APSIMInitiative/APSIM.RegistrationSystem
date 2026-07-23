@@ -33,7 +33,7 @@ namespace Tests.RegistrationWebAPITests
 
             // Put the mock http message handler into the HttpClient
             HttpClient httpClient = new(handlerMock.Object);
-            WebApiUtility webApiUtility = new(httpClient);
+            WebApiUtility webApiUtility = new(null, httpClient);
             string ipAddress = "8.8.8.8";
 
             // Act

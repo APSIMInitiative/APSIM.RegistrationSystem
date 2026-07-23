@@ -57,24 +57,26 @@ public partial class WebApiUtility
     /// <summary> The name of the environment variable that can be used to set the password for authenticating with the web API.</summary>
     private const string AuthenticationPasswordEnvironmentVariable = "WEB_API_PASSWORD";
 
-    public WebApiUtility(HttpClient client)
-    {
-        _baseUrl = GetBaseUrl();
-        _client = client;
-        client.BaseAddress = new Uri(_baseUrl);
-    }
 
-    public WebApiUtility(IConfiguration configuration)
+    /// <summary>
+    /// This is the default constructor for Dependency Injection (DI)
+    /// </summary>
+    /// <param name="configuration"></param>
+    public WebApiUtility(IConfiguration? configuration, HttpClient? client = null)
     {
-        Configure(
-            configuration["WebApi:BaseUrl"],
-            configuration["WebApi:Username"],
-            configuration["WebApi:Password"]);
+        if (configuration is not null)
+            Configure(
+                configuration["WebApi:BaseUrl"],
+                configuration["WebApi:Username"],
+                configuration["WebApi:Password"]);
 
         _baseUrl = GetBaseUrl();
         _configuredUsername = AuthenticationUsername;
         _configuredPassword = AuthenticationPassword;
-        _client = new HttpClient { BaseAddress = new Uri(_baseUrl) };
+        if (client is null)
+            _client = new HttpClient();
+        else _client = client;
+        _client.BaseAddress = new Uri(_baseUrl);
     }
 
     /// <summary> Configures the web API utility with a base URL from configuration. 
