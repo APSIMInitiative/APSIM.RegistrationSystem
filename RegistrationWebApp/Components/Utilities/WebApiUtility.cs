@@ -57,6 +57,13 @@ public partial class WebApiUtility
     /// <summary> The name of the environment variable that can be used to set the password for authenticating with the web API.</summary>
     private const string AuthenticationPasswordEnvironmentVariable = "WEB_API_PASSWORD";
 
+    public WebApiUtility(HttpClient client)
+    {
+        _baseUrl = GetBaseUrl();
+        _client = client;
+        client.BaseAddress = new Uri(_baseUrl);
+    }
+
     public WebApiUtility(IConfiguration configuration)
     {
         Configure(
@@ -567,11 +574,10 @@ public partial class WebApiUtility
         if (string.IsNullOrEmpty(ipaddress))
             throw new InvalidDataException("Error: An empty IP address was provided.");
         // Query the IPInfo API.
-        HttpClient outsideClient = new();
         string url = $"https://api.ipinfo.io/lite/{ipaddress}";
         using HttpRequestMessage request = new(HttpMethod.Get, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "4640501e1e3c57");
-        using HttpResponseMessage response = await outsideClient.SendAsync(request);
+        using HttpResponseMessage response = await _client.SendAsync(request);
         response.EnsureSuccessStatusCode();
         string jsonString = await response.Content.ReadAsStringAsync();
         Dictionary<string,object> ipInfoContent = JsonSerializer.Deserialize<Dictionary<string,object>>(jsonString) ?? 
