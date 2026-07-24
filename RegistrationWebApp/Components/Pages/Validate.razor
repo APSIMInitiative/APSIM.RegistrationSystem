@@ -319,9 +319,10 @@
     protected override async void OnInitialized()
     {
         // Get the remote IP Address of the user.
-        var remoteIpAddress = HttpContextAccessor.HttpContext?.
-            Connection.RemoteIpAddress?.MapToIPv4().ToString();
-        Logger.LogInformation($"IP Address: {remoteIpAddress}");
+        string? remoteIpAddress = HttpContextAccessor.HttpContext?.
+            Connection.RemoteIpAddress?.ToString();
+        string? remoteIpAddressConverted = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+        Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}");
         if (remoteIpAddress is null)
             IPAddress = "";
         else IPAddress = remoteIpAddress;
