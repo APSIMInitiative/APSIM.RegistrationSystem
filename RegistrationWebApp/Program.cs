@@ -1,5 +1,6 @@
 using BlazoredGoogleCaptcha.Services;
 using dotenv.net;
+using Microsoft.AspNetCore.HttpOverrides;
 using RegistrationWebApp.Components;
 using RegistrationWebApp.Components.Utilities;
 
@@ -16,6 +17,13 @@ builder.Services.AddHttpContextAccessor();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+});
 
 var app = builder.Build();
 
