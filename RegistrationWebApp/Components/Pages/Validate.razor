@@ -324,9 +324,11 @@
         @* Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}"); *@
         if (remoteIpAddress is null)
             IPAddress = "";
-        else IPAddress = remoteIpAddress;
+        else 
+            IPAddress = remoteIpAddress;
         // Get the country name
-        Country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
+        if (string.IsNullOrEmpty(Country) || Country == "unavailable")
+            Country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
     }
 
 }
