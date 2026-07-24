@@ -326,8 +326,7 @@
             IPAddress = "";
         else IPAddress = remoteIpAddress;
         // Get the country name
-        if (!string.IsNullOrEmpty(IPAddress))
-            Country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
+        Country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
     }
 
 }

@@ -1040,7 +1040,8 @@ static User ToUserModel(UserEntity entity) =>
         Id = entity.Id,
         Email = entity.Email,
         DateCreated = entity.DateCreated,
-        LicenceStatus = entity.LicenceStatus
+        LicenceStatus = entity.LicenceStatus,
+        Country = entity.Country
     };
 
 static UserEntity ToUserEntity(User model) =>
@@ -1049,7 +1050,8 @@ static UserEntity ToUserEntity(User model) =>
         Id = model.Id,
         Email = model.Email.Trim(),
         DateCreated = model.DateCreated,
-        LicenceStatus = model.LicenceStatus
+        LicenceStatus = model.LicenceStatus,
+        Country = model.Country
     };
 
 static Organisation ToOrganisationModel(OrganisationEntity entity) =>
