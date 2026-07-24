@@ -53,7 +53,7 @@
                     <label class="form-check-label mt-3" for="licenceAccepted">
                         By ticking this box, you confirm that you have read, understood and agree to be bound by the terms and conditions of the applicable APSIM license agreement.
                     </label>
-                    <InputCheckbox class="form-check mt-3" type="checkbox" id="licenceAccepted" @bind-Value="formdata.LicenceAccepted" />
+                    <InputCheckbox class="form-check-input mt-3" type="checkbox" id="licenceAccepted" @bind-Value="formdata.LicenceAccepted" />
                     <ValidationMessage For="@(() => formdata.LicenceAccepted)" class="text-danger d-block mt-2" />
                 }
             </div>
