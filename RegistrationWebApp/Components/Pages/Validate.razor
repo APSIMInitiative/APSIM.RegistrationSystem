@@ -318,17 +318,24 @@
     protected override async void OnInitialized()
     {
         // Get the remote IP Address of the user.
-        string? remoteIpAddress = HttpContextAccessor.HttpContext?.
-            Connection.RemoteIpAddress?.ToString();
+        string? remoteIpAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
         string? remoteIpAddressConverted = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
-        @* Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}"); *@
+        Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}");
+
         if (remoteIpAddress is null)
             IPAddress = "";
         else 
             IPAddress = remoteIpAddress;
-        // Get the country name
+
+        Logger.LogInformation($"Country {Country}");
+
+        string country = "";
         if (string.IsNullOrEmpty(Country) || Country == "unavailable")
-            Country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
+            country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
+
+        Logger.LogInformation($"Country {Country} : new {country}");
+        // Get the country name
+        Country = country;
     }
 
 }
