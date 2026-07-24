@@ -321,6 +321,7 @@
         // Get the remote IP Address of the user.
         var remoteIpAddress = HttpContextAccessor.HttpContext?.
             Connection.RemoteIpAddress?.MapToIPv4().ToString();
+        Logger.LogInformation($"IP Address: {remoteIpAddress}");
         if (remoteIpAddress is null)
             IPAddress = "";
         else IPAddress = remoteIpAddress;

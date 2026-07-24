@@ -5,11 +5,20 @@ using RegistrationShared.Models;
 using System.Net;
 using RegistrationShared.Enums;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
+
 
 namespace RegistrationWebApp.Components.Utilities;
 
 public partial class WebApiUtility
 {
+    public static ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+    {
+        builder.AddConsole();
+    });
+
+    readonly ILogger logger = loggerFactory.CreateLogger("WebApiUtility");
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -574,7 +583,10 @@ public partial class WebApiUtility
     {
         string defaultCountryName = "unavailable";
         if (string.IsNullOrEmpty(ipaddress))
-            throw new InvalidDataException("Error: An empty IP address was provided.");
+        {
+            logger.LogInformation("No IP address provided. Using default country name instead.");   
+            return defaultCountryName;
+        }
         // Query the IPInfo API.
         string url = $"https://api.ipinfo.io/lite/{ipaddress}";
         using HttpRequestMessage request = new(HttpMethod.Get, url);
@@ -582,6 +594,7 @@ public partial class WebApiUtility
         using HttpResponseMessage response = await _client.SendAsync(request);
         response.EnsureSuccessStatusCode();
         string jsonString = await response.Content.ReadAsStringAsync();
+        logger.LogInformation($"IP address Information:\n {jsonString}");
         Dictionary<string,object> ipInfoContent = JsonSerializer.Deserialize<Dictionary<string,object>>(jsonString) ?? 
             new Dictionary<string, object>();
 
