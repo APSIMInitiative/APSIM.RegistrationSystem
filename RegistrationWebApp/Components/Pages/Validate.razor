@@ -171,11 +171,12 @@
         if (!downloadLinkEmailSent)
         {
             Logger.LogInformation("No user found for email: {Email}. Registering new user...", emailInput);
+            string countryName = await GetCountryName();
             User newUser = new User
             {
                 Email = emailInput,
                 DateCreated = DateTime.UtcNow,
-                Country = Country
+                Country = countryName
             };
             UserResponseModel response = await WebApiUtility.CreateUserAsync(newUser);        
             OpenModal("Registration Complete", response.Message);
@@ -315,29 +316,31 @@
         captchaVerified = false;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    /// <summary>
+    /// Get the country name
+    /// </summary>
+    /// <returns></returns>
+    private async Task<string> GetCountryName()
     {
-        if (firstRender)
-        {
-            // Get the remote IP Address of the user.
-            string? remoteIpAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
-            string? remoteIpAddressConverted = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
-            Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}");
+        // Get the remote IP Address of the user.
+        string? remoteIpAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+        string? remoteIpAddressConverted = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+        Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}");
 
-            if (remoteIpAddress is null)
-                IPAddress = "";
-            else 
-                IPAddress = remoteIpAddress;
+        if (remoteIpAddress is null)
+            IPAddress = "";
+        else 
+            IPAddress = remoteIpAddress;
 
-            Logger.LogInformation($"Country {Country}");
+        string country = "";
+        if (string.IsNullOrEmpty(Country) || Country == "unavailable")
+            country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
 
-            string country = "";
-            if (string.IsNullOrEmpty(Country) || Country == "unavailable")
-                country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
-
-            Logger.LogInformation($"Country {Country} : new {country}");
-            // Get the country name
-            Country = country;
-        }
+        Logger.LogInformation($"Country: {country}");
+        // Get the country name
+        return country;
     }
+
+        
+    
 }
