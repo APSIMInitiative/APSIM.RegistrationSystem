@@ -323,21 +323,22 @@
     private async Task<string> GetCountryName()
     {
         // Get the remote IP Address of the user.
-        string? remoteIpAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
         string? remoteIpAddressConverted = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
-        Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}");
+        Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted}");
 
-        if (remoteIpAddress is null)
+        Logger.LogInformation(
+    "HttpContext: {HasContext}, RemoteIp: {Ip}, ConnectionId: {ConnectionId}",
+            HttpContextAccessor.HttpContext != null,
+            HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+            HttpContextAccessor.HttpContext?.Connection.Id);
+
+        if (remoteIpAddressConverted is null)
             IPAddress = "";
         else 
-            IPAddress = remoteIpAddress;
+            IPAddress = remoteIpAddressConverted;
 
-        string country = "";
-        if (string.IsNullOrEmpty(Country) || Country == "unavailable")
-            country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
-
+        string country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
         Logger.LogInformation($"Country: {country}");
-        // Get the country name
         return country;
     }
 
