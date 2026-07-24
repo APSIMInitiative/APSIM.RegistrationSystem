@@ -172,7 +172,6 @@
         if (!downloadLinkEmailSent)
         {
             Logger.LogInformation("No user found for email: {Email}. Registering new user...", emailInput);
-            string countryName = await GetCountryName();
             User newUser = new User
             {
                 Email = emailInput,
@@ -347,12 +346,11 @@
     // Get the IP address for later use.
     protected override async Task OnInitializedAsync()
     {
-        UserContext.IPAddress =
-            HttpContextAccessor.HttpContext?
-                .Connection
-                .RemoteIpAddress?
-                .MapToIPv4()
-                .ToString();
+        if (string.IsNullOrEmpty(UserContext.IPAddress))
+        {
+            UserContext.IPAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+            Logger.LogInformation($"User IP address OnInitializedAsync event: {UserContext.IPAddress}");
+        }
     }
 
 
