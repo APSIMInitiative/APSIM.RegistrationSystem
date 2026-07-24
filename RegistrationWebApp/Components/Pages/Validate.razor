@@ -318,6 +318,15 @@
 
     protected override async void OnInitialized()
     {
+        var request = HttpContextAccessor.HttpContext?.Request;
+
+        if (request?.Headers != null)
+        {
+            foreach (var header in request.Headers)
+            {
+                Logger.LogInformation($"{header.Key}: {header.Value}");
+            }
+        }
         // Get the remote IP Address of the user.
         string? remoteIpAddress = HttpContextAccessor.HttpContext?.
             Connection.RemoteIpAddress?.ToString();

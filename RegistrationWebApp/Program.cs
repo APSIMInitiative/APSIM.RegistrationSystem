@@ -23,17 +23,16 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders =
         ForwardedHeaders.XForwardedFor |
         ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
 });
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 // Force service construction on startup so WebApiUtility configuration is initialized.
 _ = app.Services.GetRequiredService<WebApiUtility>();
-
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
