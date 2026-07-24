@@ -21,8 +21,7 @@
 @inject IConfiguration Configuration
 @inject IHttpContextAccessor HttpContextAccessor
 
-@rendermode InteractiveServer
-
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <PageTitle>Email Verification</PageTitle>
 
@@ -318,25 +317,17 @@
 
     protected override async void OnInitialized()
     {
-        var request = HttpContextAccessor.HttpContext?.Request;
-
-        if (request?.Headers != null)
-        {
-            foreach (var header in request.Headers)
-            {
-                Logger.LogInformation($"{header.Key}: {header.Value}");
-            }
-        }
         // Get the remote IP Address of the user.
         string? remoteIpAddress = HttpContextAccessor.HttpContext?.
             Connection.RemoteIpAddress?.ToString();
         string? remoteIpAddressConverted = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
-        Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}");
+        @* Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted} IP Address (IPv6): {remoteIpAddress}"); *@
         if (remoteIpAddress is null)
             IPAddress = "";
         else IPAddress = remoteIpAddress;
         // Get the country name
-        Country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
+        if (!string.IsNullOrEmpty(IPAddress))
+            Country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
     }
 
 }
