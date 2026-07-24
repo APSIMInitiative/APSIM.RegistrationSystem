@@ -20,6 +20,7 @@
 @inject CaptchaService captchaService
 @inject IConfiguration Configuration
 @inject IHttpContextAccessor HttpContextAccessor
+@inject UserContext UserContext
 
 @rendermode InteractiveServer
 
@@ -176,7 +177,8 @@
             {
                 Email = emailInput,
                 DateCreated = DateTime.UtcNow,
-                Country = countryName
+                Country = UserContext.IPAddress ?? "unavailable"
+
             };
             UserResponseModel response = await WebApiUtility.CreateUserAsync(newUser);        
             OpenModal("Registration Complete", response.Message);
@@ -341,6 +343,18 @@
         Logger.LogInformation($"Country: {country}");
         return country;
     }
+
+    // Get the IP address for later use.
+    protected override async Task OnInitializedAsync()
+    {
+        UserContext.IPAddress =
+            HttpContextAccessor.HttpContext?
+                .Connection
+                .RemoteIpAddress?
+                .MapToIPv4()
+                .ToString();
+    }
+
 
         
     

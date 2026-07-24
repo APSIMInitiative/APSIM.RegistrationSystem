@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<WebApiUtility>();
 builder.Services.AddScoped<DownloadAccessState>();
+builder.Services.AddScoped<UserContext>();
 builder.Services.AddHttpClient<APSIMBuildsAPIUtility>();
 builder.Services.AddSingleton<CaptchaService>();
 builder.Services.AddHttpContextAccessor();
