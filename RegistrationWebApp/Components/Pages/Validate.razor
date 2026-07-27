@@ -177,7 +177,7 @@
         {
             Logger.LogInformation("No user found for email: {Email}. Registering new user...", emailInput);
 
-            ProtectedBrowserStorageResult<string> result = await ProtectedSessionStore.GetAsync<string>("ipAddress");
+            @* ProtectedBrowserStorageResult<string> result = await ProtectedSessionStore.GetAsync<string>("ipAddress");
             string ip = string.Empty;
             if (result.Success)
             {
@@ -186,9 +186,17 @@
                 else ip = string.Empty;
             }
             else ip = "unavailable";
-            Logger.LogInformation($"IP address value after form submission and session fetching: {ip}");
-            string countryName = await WebApiUtility.GetCountryNameFromIPAddress(ip);
-            Logger.LogInformation($"Country name: {countryName}");
+            Logger.LogInformation($"IP address value after form submission and session fetching: {ip}"); *@
+            string countryName = string.Empty;
+            if (!string.IsNullOrEmpty(UserContext.IPAddress))
+            {
+                countryName = await WebApiUtility.GetCountryNameFromIPAddress(UserContext.IPAddress);
+                Logger.LogInformation($"Country name: {countryName}");
+            }
+            else
+            {
+                Logger.LogWarning("User context did not have a non-null IP address. The countryName was not fetched. Default value will be used.");
+            }
 
             User newUser = new User
             {
@@ -335,42 +343,13 @@
         captchaVerified = false;
     }
 
-    /// <summary>
-    /// Get the country name
-    /// </summary>
-    /// <returns></returns>
-    private async Task<string> GetCountryName()
-    {
-        // Get the remote IP Address of the user.
-        string? remoteIpAddressConverted = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
-        Logger.LogInformation($"IP Address (IPv4): {remoteIpAddressConverted}");
-
-        Logger.LogInformation(
-    "HttpContext: {HasContext}, RemoteIp: {Ip}, ConnectionId: {ConnectionId}",
-            HttpContextAccessor.HttpContext != null,
-            HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
-            HttpContextAccessor.HttpContext?.Connection.Id);
-
-        if (remoteIpAddressConverted is null)
-            IPAddress = "";
-        else 
-            IPAddress = remoteIpAddressConverted;
-
-        string country = await WebApiUtility.GetCountryNameFromIPAddress(IPAddress);
-        Logger.LogInformation($"Country: {country}");
-        return country;
-    }
-
     // Get the IP address for later use.
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnInitialized()
     {
-        if (firstRender)
-        {
-            string? ipAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
-            Logger.LogInformation($"User IP address OnInitializedAsync event: {ipAddress}"); 
-            if (!string.IsNullOrEmpty(ipAddress))
-                await ProtectedSessionStore.SetAsync("ipAddress", ipAddress);
-        }
+        string? ipAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+        Logger.LogInformation($"User IP address OnInitializedAsync event: {ipAddress}"); 
+        if (!string.IsNullOrEmpty(ipAddress))
+            UserContext.IPAddress = ipAddress;
     }
 
 
