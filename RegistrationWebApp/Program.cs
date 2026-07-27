@@ -37,6 +37,14 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
+builder.Logging.ClearProviders();
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss UTC ";
+    options.UseUtcTimestamp = true;
+    options.SingleLine = true;
+});
+
 var app = builder.Build();
 
 app.UseForwardedHeaders();
@@ -52,11 +60,6 @@ app.Use(async (context, next) =>
             .ToString();
 
     userContext.IPAddress = ip;
-
-    app.Logger.LogInformation(
-        "Middleware captured IP: {IP}",
-        ip);
-
     await next();
 });
 
