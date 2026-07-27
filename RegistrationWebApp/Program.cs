@@ -1,5 +1,6 @@
 using BlazoredGoogleCaptcha.Services;
 using dotenv.net;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.HttpOverrides;
 using RegistrationWebApp.Components;
 using RegistrationWebApp.Components.Utilities;
@@ -9,11 +10,12 @@ DotEnv.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<WebApiUtility>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DownloadAccessState>();
 builder.Services.AddScoped<UserContext>();
+builder.Services.AddScoped<CircuitHandler, UserCircuitHandler>();
 builder.Services.AddHttpClient<APSIMBuildsAPIUtility>();
 builder.Services.AddSingleton<CaptchaService>();
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -39,6 +41,24 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 app.UseSession();
+app.Use(async (context, next) =>
+{
+    var userContext =
+        context.RequestServices.GetRequiredService<UserContext>();
+
+    var ip =
+        context.Connection.RemoteIpAddress?
+            .MapToIPv4()
+            .ToString();
+
+    userContext.IPAddress = ip;
+
+    app.Logger.LogInformation(
+        "Middleware captured IP: {IP}",
+        ip);
+
+    await next();
+});
 
 // Force service construction on startup so WebApiUtility configuration is initialized.
 _ = app.Services.GetRequiredService<WebApiUtility>();
