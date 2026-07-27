@@ -346,6 +346,19 @@
     // Get the IP address for later use.
     protected override void OnInitialized()
     {
+
+        Logger.LogInformation(
+            "HttpContext: {Context}",
+            HttpContextAccessor.HttpContext != null);
+
+        Logger.LogInformation(
+            "RemoteIpAddress: {Ip}",
+            HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString());
+
+        Logger.LogInformation(
+            "X-Forwarded-For: {XFF}",
+            HttpContextAccessor.HttpContext?.Request.Headers["X-Forwarded-For"].ToString());
+
         string? ipAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
         Logger.LogInformation($"User IP address OnInitialized event: {ipAddress}"); 
         if (!string.IsNullOrEmpty(ipAddress))
