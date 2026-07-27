@@ -26,7 +26,7 @@
 @inject ProtectedSessionStorage ProtectedSessionStore  
 
 
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <PageTitle>Email Verification</PageTitle>
 
@@ -347,7 +347,7 @@
     protected override void OnInitialized()
     {
         string? ipAddress = HttpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.MapToIPv4().ToString();
-        Logger.LogInformation($"User IP address OnInitializedAsync event: {ipAddress}"); 
+        Logger.LogInformation($"User IP address OnInitialized event: {ipAddress}"); 
         if (!string.IsNullOrEmpty(ipAddress))
             UserContext.IPAddress = ipAddress;
     }
