@@ -23,6 +23,15 @@ DotEnv.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure logging with UTC timestamps.
+builder.Logging.ClearProviders();
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss UTC ";
+    options.UseUtcTimestamp = true;
+    options.SingleLine = true;
+});
+
 // Add environment variables to configuration (mapped from Env__Var__Name to Section:Key).
 builder.Configuration
     .AddInMemoryCollection(new Dictionary<string, string?>
