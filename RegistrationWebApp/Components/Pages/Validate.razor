@@ -22,6 +22,8 @@
 @inject CaptchaService captchaService
 @inject IConfiguration Configuration
 @inject UserContext UserContext
+@inject PersistentComponentState ApplicationState
+@inject IHttpContextAccessor HttpContextAccessor
 
 
 @rendermode InteractiveServer
@@ -133,7 +135,8 @@
         !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SiteKey"]) &&
         !string.IsNullOrWhiteSpace(Configuration["Recaptcha:v2SecretKey"]);
     private bool IsButtonDisabled => IsRecaptchaConfigured && !captchaVerified;
-    private string IPAddress = string.Empty;
+    private string? _ipAddress;
+    private PersistingComponentStateSubscription? _subscription;
     private string Country = string.Empty;
 
     public void Dispose()
@@ -176,11 +179,11 @@
             Logger.LogInformation("No user found for email: {Email}. Registering new user...", emailInput);
 
 
-            Logger.LogInformation("IP from UserContext: {IP}", UserContext.IPAddress);
+            Logger.LogInformation("IP = {IP}", _ipAddress);
             string countryName = string.Empty;
-            if (!string.IsNullOrEmpty(UserContext.IPAddress))
+            if (!string.IsNullOrEmpty(_ipAddress))
             {
-                countryName = await WebApiUtility.GetCountryNameFromIPAddress(UserContext.IPAddress);
+                countryName = await WebApiUtility.GetCountryNameFromIPAddress(_ipAddress);
                 Logger.LogInformation($"Country name: {countryName}");
             }
             else
@@ -331,6 +334,25 @@
     private void OnCaptchaExpired()
     {
         captchaVerified = false;
+    }
+
+
+
+    protected override void OnInitialized()
+    {
+        if (!ApplicationState.TryTakeFromJson<string>("ip", out _ipAddress))
+        {
+            _ipAddress = HttpContextAccessor.HttpContext?
+                .Connection.RemoteIpAddress?
+                .MapToIPv4()
+                .ToString();
+        }
+
+        _subscription = ApplicationState.RegisterOnPersisting(() =>
+        {
+            ApplicationState.PersistAsJson("ip", _ipAddress);
+            return Task.CompletedTask;
+        });
     }
 
     
