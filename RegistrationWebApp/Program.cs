@@ -14,6 +14,13 @@ builder.Services.AddScoped<UserContext>();
 builder.Services.AddHttpClient<APSIMBuildsAPIUtility>();
 builder.Services.AddSingleton<CaptchaService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+   options.IdleTimeout = TimeSpan.FromSeconds(60);
+   options.Cookie.HttpOnly = true;
+   options.Cookie.IsEssential = true;
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -31,6 +38,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+app.UseSession();
 
 // Force service construction on startup so WebApiUtility configuration is initialized.
 _ = app.Services.GetRequiredService<WebApiUtility>();
