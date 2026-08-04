@@ -242,6 +242,18 @@ public partial class WebApiUtility
         return await _client.DeleteAsync(GetEndpointUrl($"{UsersEndpoint}/{userId}"));
     }
 
+    /// <summary>
+    /// Deletes an organisation by id by sending a DELETE request to the web API.
+    /// </summary>
+    /// <param name="organisationId"></param>
+    /// <returns></returns>
+    public async Task<HttpResponseMessage> DeleteOrganisationAsync(Guid organisationId)
+    {
+        string token = await GetAuthenticationToken();
+        AuthenticateRequest(_client, token);
+        return await _client.DeleteAsync(GetEndpointUrl($"{OrganisationsEndpoint}/{organisationId}"));
+    }
+
 
     /// <summary>
     /// Checks whether a user with the given email exists in the system.

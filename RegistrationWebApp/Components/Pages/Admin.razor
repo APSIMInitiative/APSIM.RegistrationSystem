@@ -236,6 +236,8 @@
                                         <th>Application Date</th>
                                         <th>Registered Members</th>
                                         <th>Licence Status</th>
+                                        <th>Contact Email</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -248,6 +250,13 @@
                                             <td>@organisation.DateCreated.ToString("d", CultureInfo.GetCultureInfo("en-AU"))</td>
                                             <td>@CountRegisteredUsersForOrganisation(organisation)</td>
                                             <td>@organisation.LicenceStatus.GetDescription()</td>
+                                            <th>@organisation.ContactEmail</th>
+                                            <th>
+                                                <button class="btn btn-sm btn-danger"
+                                                    @onclick="() => HandleDeleteOrganisation(organisation)">
+                                                Delete
+                                                </button>
+                                            </th>
                                         </tr>
                                     }
                                 </tbody>
@@ -786,6 +795,20 @@
 
         Logger.LogError("Failed to delete user {UserId}. Status code: {StatusCode}", user.Id, response.StatusCode);
         ShowModal("Error", $"Failed to delete user '{user.Email}'. Status Code: {response.StatusCode}");
+    }
+
+    private async Task HandleDeleteOrganisation(Organisation organisation)
+    {
+        HttpResponseMessage response = await WebApiUtility.DeleteOrganisationAsync(organisation.Id);
+        if (response.IsSuccessStatusCode)
+        {
+            ShowModal("Success", $"Organisation '{organisation.Name}' deleted successfully.");
+            await RefreshUsersAndOrganisationsAsync();
+            return;
+        }
+
+        Logger.LogError("Failed to delete user {UserId}. Status code: {StatusCode}", organisation.Id, response.StatusCode);
+        ShowModal("Error", $"Failed to delete user '{organisation.Name}'. Status Code: {response.StatusCode}");
     }
 
     private async void OnCaptchaSuccess(string response)
