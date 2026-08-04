@@ -35,10 +35,10 @@
                 <EditForm Model="@formOrganisation" OnValidSubmit="ShowConfirmModal" FormName="specialUseRegistrationForm">
                     <DataAnnotationsValidator />
                     <div class="special-use-form-row row mb-3">
-                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Email" @bind-Value="formOrganisation!.ContactEmail" />
-                        <ValidationMessage For="@(() => formOrganisation.ContactEmail)" />
                         <InputText class="form-control mb-2" Placeholder="*Contact Person's Name" @bind-Value="formOrganisation!.ContactName" />
                         <ValidationMessage For="@(() => formOrganisation.ContactName)" />
+                        <InputText class="form-control mb-2" Placeholder="*Contact Person's Email" @bind-Value="formOrganisation!.ContactEmail" />
+                        <ValidationMessage For="@(() => formOrganisation.ContactEmail)" />
                         <InputText class="form-control mb-2" Placeholder="Contact Phone" @bind-Value="formOrganisation!.ContactPhone" />
                         <ValidationMessage For="@(() => formOrganisation.ContactPhone)" />
                         <InputText class="form-control mb-2" Placeholder="*Organisation Name" @bind-Value="formOrganisation!.Name" />
