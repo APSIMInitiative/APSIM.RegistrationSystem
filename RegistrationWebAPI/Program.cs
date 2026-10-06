@@ -705,7 +705,7 @@ users.MapDelete("/{id:guid}", async (Guid id, RegistrationDbContext db) =>
     .Produces(StatusCodes.Status204NoContent)
     .Produces(StatusCodes.Status404NotFound);
 
-users.MapGet("/verify", async (string token, RegistrationDbContext db) =>
+users.MapGet("/verify", async (string token, RegistrationDbContext db, ILogger<Program> logger) =>
 {
     if (string.IsNullOrWhiteSpace(token))
     {
@@ -718,7 +718,12 @@ users.MapGet("/verify", async (string token, RegistrationDbContext db) =>
         return Results.NotFound("Invalid verification token.");
     }
 
-    if (entity.EmailVerificationTokenExpiryUtc is null || entity.EmailVerificationTokenExpiryUtc < DateTime.UtcNow)
+    if (entity.EmailVerificationTokenExpiryUtc is null)
+    {
+        logger.LogWarning("Email verification token expiry is missing for user {User}.", entity);
+    }
+
+    if (entity.EmailVerificationTokenExpiryUtc < DateTime.UtcNow)
     {
         return Results.BadRequest("Verification token has expired.");
     }
