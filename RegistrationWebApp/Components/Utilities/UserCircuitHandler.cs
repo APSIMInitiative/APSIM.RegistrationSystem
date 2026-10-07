@@ -29,9 +29,10 @@ public class UserCircuitHandler : CircuitHandler
 
         _userContext.IPAddress = ipAddress;
 
-        _logger.LogInformation(
-            "Captured IP in circuit: {IP}",
-            ipAddress);
+        // Turn this off for now.
+        // _logger.LogInformation(
+        //     "Captured IP in circuit: {IP}",
+        //     ipAddress);
 
         return Task.CompletedTask;
     }
