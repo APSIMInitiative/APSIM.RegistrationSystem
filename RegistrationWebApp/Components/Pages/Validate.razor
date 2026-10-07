@@ -67,11 +67,12 @@
             @if (IsRecaptchaConfigured)
             {
                 <div class="mt-2 d-flex justify-content-center">
-                    <Captcha    
+                    <SafeCaptcha    
                         SiteKey="@Configuration["Recaptcha:v2SiteKey"]" 
                         OnSuccess="@OnCaptchaSuccess" 
-                        OnExpired="@OnCaptchaExpired">
-                    </Captcha>
+                        OnExpired="@OnCaptchaExpired"
+                    OnFallback="@OnCaptchaFallback">
+                    </SafeCaptcha>
                 </div>
             }
             else
@@ -329,6 +330,11 @@
         {
             //show error message or handle failure
         }
+    }
+
+    private void OnCaptchaFallback()
+    {
+        captchaVerified = true;
     }
 
     private void OnCaptchaExpired()

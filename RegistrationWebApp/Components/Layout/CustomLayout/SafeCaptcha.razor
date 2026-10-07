@@ -1,0 +1,41 @@
+@using BlazoredGoogleCaptcha
+@using RegistrationWebApp.Components.Utilities
+@inherits ErrorBoundaryBase
+@inject UserContext UserContext
+@inject CaptchaFallbackLimiter Limiter
+@inject ILogger<SafeCaptcha> Logger
+
+@* Wraps Captcha so a failure to load reCAPTCHA doesn't kill the circuit. Falls back to a rate limited bypass. *@
+@if (CurrentException is null)
+{
+    <Captcha SiteKey="@SiteKey" OnSuccess="@OnSuccess" OnExpired="@OnExpired"></Captcha>
+}
+else
+{
+    <div class="text-warning">@message</div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string? SiteKey { get; set; }
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+    [Parameter] public EventCallback OnExpired { get; set; }
+    /// <summary>Invoked when reCAPTCHA failed to load and the user is within the fallback rate limit.</summary>
+    [Parameter] public EventCallback OnFallback { get; set; }
+
+    private string message = string.Empty;
+
+    protected override async Task OnErrorAsync(Exception exception)
+    {
+        Logger.LogWarning(exception, "Failed to load reCAPTCHA for {IP}", UserContext.IPAddress);
+
+        if (Limiter.TryAcquire(UserContext.IPAddress))
+        {
+            message = "reCAPTCHA could not be loaded. You may continue.";
+            await OnFallback.InvokeAsync();
+        }
+        else
+        {
+            message = "reCAPTCHA could not be loaded and too many attempts were made. Please check your network or browser extensions, then try again later.";
+        }
+    }
+}

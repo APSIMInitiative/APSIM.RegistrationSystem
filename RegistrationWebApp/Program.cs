@@ -16,6 +16,7 @@ builder.Services.AddScoped<UserContext>();
 builder.Services.AddScoped<CircuitHandler, UserCircuitHandler>();
 builder.Services.AddHttpClient<APSIMBuildsAPIUtility>();
 builder.Services.AddSingleton<CaptchaService>();
+builder.Services.AddSingleton<CaptchaFallbackLimiter>();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
